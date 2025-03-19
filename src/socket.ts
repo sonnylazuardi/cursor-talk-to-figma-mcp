@@ -8,10 +8,12 @@ function handleConnection(ws: ServerWebSocket<any>) {
   console.log("New client connected");
 
   // Send welcome message to the new client
-  ws.send(JSON.stringify({
-    type: "system",
-    message: "Please join a channel to start chatting",
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "system",
+      message: "Please join a channel to start chatting",
+    })
+  );
 
   ws.close = () => {
     console.log("Client disconnected");
@@ -24,11 +26,13 @@ function handleConnection(ws: ServerWebSocket<any>) {
         // Notify other clients in same channel
         clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-              type: "system",
-              message: "A user has left the channel",
-              channel: channelName
-            }));
+            client.send(
+              JSON.stringify({
+                type: "system",
+                message: "A user has left the channel",
+                channel: channelName,
+              })
+            );
           }
         });
       }
@@ -78,10 +82,12 @@ const server = Bun.serve({
         if (data.type === "join") {
           const channelName = data.channel;
           if (!channelName || typeof channelName !== "string") {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Channel name is required"
-            }));
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Channel name is required",
+              })
+            );
             return;
           }
 
@@ -95,31 +101,27 @@ const server = Bun.serve({
           channelClients.add(ws);
 
           // Notify client they joined successfully
-          ws.send(JSON.stringify({
-            type: "system",
-            message: `Joined channel: ${channelName}`,
-            channel: channelName
-          }));
-
-          console.log("Sending message to client:", data.id);
-
-          ws.send(JSON.stringify({
-            type: "system",
-            message: {
-              id: data.id,
-              result: "Connected to channel: " + channelName,
-            },
-            channel: channelName
-          }));
+          ws.send(
+            JSON.stringify({
+              type: "system",
+              message: {
+                id: data.id,
+                result: `Connected to channel: ${channelName}`,
+              },
+              channel: channelName,
+            })
+          );
 
           // Notify other clients in channel
           channelClients.forEach((client) => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({
-                type: "system",
-                message: "A new user has joined the channel",
-                channel: channelName
-              }));
+              client.send(
+                JSON.stringify({
+                  type: "system",
+                  message: "A new user has joined the channel",
+                  channel: channelName,
+                })
+              );
             }
           });
           return;
@@ -129,19 +131,23 @@ const server = Bun.serve({
         if (data.type === "message") {
           const channelName = data.channel;
           if (!channelName || typeof channelName !== "string") {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Channel name is required"
-            }));
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Channel name is required",
+              })
+            );
             return;
           }
 
           const channelClients = channels.get(channelName);
           if (!channelClients || !channelClients.has(ws)) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "You must join the channel first"
-            }));
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You must join the channel first",
+              })
+            );
             return;
           }
 
@@ -149,12 +155,14 @@ const server = Bun.serve({
           channelClients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
               console.log("Broadcasting message to client:", data.message);
-              client.send(JSON.stringify({
-                type: "broadcast",
-                message: data.message,
-                sender: client === ws ? "You" : "User",
-                channel: channelName
-              }));
+              client.send(
+                JSON.stringify({
+                  type: "broadcast",
+                  message: data.message,
+                  sender: client === ws ? "You" : "User",
+                  channel: channelName,
+                })
+              );
             }
           });
         }
@@ -167,8 +175,8 @@ const server = Bun.serve({
       channels.forEach((clients) => {
         clients.delete(ws);
       });
-    }
-  }
+    },
+  },
 });
 
 console.log(`WebSocket server running on port ${server.port}`);
