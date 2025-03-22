@@ -188,3 +188,10 @@ When working with the Figma MCP:
 ## License
 
 MIT
+
+Added Windows support including:
+
+- PowerShell setup script for Windows installation
+- Windows-specific commands for running Bun
+- Updated documentation with Windows-specific instructions
+- Added Windows-specific MCP configuration
