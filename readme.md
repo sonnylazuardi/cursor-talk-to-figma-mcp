@@ -14,6 +14,22 @@ https://github.com/user-attachments/assets/129a14d2-ed73-470f-9a4c-2240b2a4885c
 
 1. Install Bun if you haven't already:
 
+For Windows:
+
+```bash
+powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+After installation, you need to set up Bun to work in PowerShell. Open PowerShell as Administrator and run:
+
+```bash
+Add-Content -Path $PROFILE -Value "Set-Alias -Name bun -Value `"$env:USERPROFILE\.bun\bin\bun.exe`" -Scope Global"
+```
+
+Then close and reopen PowerShell.
+
+For Linux/Mac:
+
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
@@ -25,6 +41,14 @@ bun setup
 ```
 
 3. Start the Websocket server
+
+For Windows:
+
+```bash
+& "$env:USERPROFILE\.bun\bin\bun.exe" start
+```
+
+For Linux/Mac:
 
 ```bash
 bun start
@@ -59,8 +83,16 @@ Add the server to your Cursor MCP configuration in `~/.cursor/mcp.json`:
 
 Start the WebSocket server:
 
+For Windows:
+
 ```bash
-bun run src/socket.ts
+& "$env:USERPROFILE\.bun\bin\bun.exe" start
+```
+
+For Linux/Mac:
+
+```bash
+bun start
 ```
 
 ### Figma Plugin
