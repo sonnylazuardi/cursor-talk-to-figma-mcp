@@ -109,6 +109,59 @@
       color: #66b3ff;
     }
 
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+      margin-right: 8px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #444444;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.toggle-slider {
+      background-color: #18a0fb;
+    }
+
+    input:checked+.toggle-slider:before {
+      transform: translateX(20px);
+    }
+
     .section {
       margin-bottom: 24px;
     }
@@ -219,6 +272,13 @@
           <input type="number" id="port" placeholder="3055" value="3055" min="1024" max="65535" />
           <button id="btn-connect" class="primary">Connect</button>
         </div>
+        <div class="toggle-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="use-localhost">
+            <span class="toggle-slider"></span>
+          </label>
+          <span>Use localhost</span>
+        </div>
       </div>
 
       <div id="connection-status" class="status disconnected">
@@ -297,8 +357,12 @@
         }
 
         state.serverPort = port;
-        // state.socket = new WebSocket(`ws://localhost:${port}`);
-        state.socket = new WebSocket(`wss://vps.sonnylab.com:${port}`);
+        const useLocalhost = document.getElementById("use-localhost").checked;
+        const wsUrl = useLocalhost
+          ? `ws://localhost:${port}`
+          : `wss://vps.sonnylab.com:${port}`;
+
+        state.socket = new WebSocket(wsUrl);
 
         state.socket.onopen = () => {
           // Generate random channel name
