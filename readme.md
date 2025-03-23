@@ -45,7 +45,7 @@ bun setup
 For Windows:
 
 ```bash
-& "$env:USERPROFILE\.bun\bin\bun.exe" start
+.\scripts\start.ps1
 ```
 
 For Linux/Mac:
