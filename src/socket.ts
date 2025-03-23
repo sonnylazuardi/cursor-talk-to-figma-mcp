@@ -38,6 +38,10 @@ function handleConnection(ws: ServerWebSocket<any>) {
 
 const server = Bun.serve({
   port: 3055,
+  tls: {
+    key: Bun.file("~/ssl/private.key"),
+    cert: Bun.file("~/ssl/certificate.crt"),
+  },
   fetch(req: Request, server: Server) {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
