@@ -285,6 +285,14 @@
         Not connected to Cursor MCP server
       </div>
 
+      <div id="mcp-config" class="section hidden">
+        <h2>MCP Configuration</h2>
+        <p>Copy this configuration to your <code>mcp.json</code> file in Cursor:</p>
+        <textarea id="mcp-json" rows="12" readonly
+          style="width: 100%; background: #2d2d2d; color: #e0e0e0; padding: 12px; border: 1px solid #444444; border-radius: 4px; font-family: monospace; margin-bottom: 8px;"></textarea>
+        <button id="btn-copy" class="secondary">Copy to Clipboard</button>
+      </div>
+
       <div class="section">
         <button id="btn-disconnect" class="secondary" disabled>
           Disconnect
@@ -340,12 +348,20 @@
         (isConnected
           ? "Connected to Cursor MCP server"
           : "Not connected to Cursor MCP server");
-      connectionStatus.className = `status ${isConnected ? "connected" : "disconnected"
-        }`;
+      connectionStatus.className = `status ${isConnected ? "connected" : "disconnected"}`;
 
       connectButton.disabled = isConnected;
       disconnectButton.disabled = !isConnected;
       portInput.disabled = isConnected;
+
+      // Show/hide MCP config section
+      const mcpConfig = document.getElementById('mcp-config');
+      mcpConfig.className = `section ${isConnected ? '' : 'hidden'}`;
+
+      // Update MCP config text when showing
+      if (isConnected) {
+        updateMcpConfig();
+      }
     }
 
     // Connect to WebSocket server
@@ -634,6 +650,42 @@
           break;
       }
     };
+
+    // Add this to the script section, after all the other event listeners
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      const textarea = document.getElementById('mcp-json');
+      textarea.select();
+      document.execCommand('copy');
+      const button = document.getElementById('btn-copy');
+      button.textContent = 'Copied!';
+      setTimeout(() => {
+        button.textContent = 'Copy to Clipboard';
+      }, 2000);
+    });
+
+    // Add this function to the script section
+    function updateMcpConfig() {
+      const useLocalhost = document.getElementById("use-localhost").checked;
+      const mcpConfig = {
+        mcpServers: {
+          TalkToFigma: {
+            command: "bunx",
+            args: useLocalhost
+              ? ["cursor-talk-to-figma-mcp"]
+              : ["cursor-talk-to-figma-mcp", "--server=vps.sonnylab.com"]
+          }
+        }
+      };
+
+      document.getElementById('mcp-json').value = JSON.stringify(mcpConfig, null, 2);
+    }
+
+    // Add event listener for the localhost toggle
+    document.getElementById("use-localhost").addEventListener("change", () => {
+      if (state.connected) {
+        updateMcpConfig();
+      }
+    });
   </script>
 </body>
 
