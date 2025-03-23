@@ -11,7 +11,8 @@
   "permissions": [],
   "networkAccess": {
     "allowedDomains": [
-      "https://google.com"
+      "https://google.com",
+      "https://vps.sonnylab.com"
     ],
     "devAllowedDomains": [
       "http://localhost:3055",
