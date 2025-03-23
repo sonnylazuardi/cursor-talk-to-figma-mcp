@@ -1,6 +1,6 @@
 {
   "name": "Cursor MCP Plugin",
-  "id": "cursor-mcp-plugin",
+  "id": "1485687494525374295",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
@@ -20,7 +20,5 @@
       "wss://vps.sonnylab.com"
     ]
   },
-  "documentAccess": "dynamic-page",
-  "enableProposedApi": true,
-  "enablePrivatePluginApi": true
+  "documentAccess": "dynamic-page"
 }
