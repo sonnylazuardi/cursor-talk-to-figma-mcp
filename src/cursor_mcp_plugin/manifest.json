@@ -15,7 +15,8 @@
     ],
     "devAllowedDomains": [
       "http://localhost:3055",
-      "ws://localhost:3055"
+      "ws://localhost:3055",
+      "wss://vps.sonnylab.com:3055"
     ]
   },
   "documentAccess": "dynamic-page",
