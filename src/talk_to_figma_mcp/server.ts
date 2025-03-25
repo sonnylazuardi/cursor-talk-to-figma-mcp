@@ -853,6 +853,47 @@ server.tool(
   }
 );
 
+// Add Set Overflow Direction Tool
+server.tool(
+  "set_overflow_direction",
+  "Set the overflow direction (scroll behavior) of a node in Figma",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    direction: z.enum([
+      "NONE", 
+      "HORIZONTAL", 
+      "VERTICAL", 
+      "BOTH"
+    ]).describe("Overflow direction: NONE (no scrolling), HORIZONTAL, VERTICAL, or BOTH")
+  },
+  async ({ nodeId, direction }) => {
+    try {
+      const result = await sendCommandToFigma('set_overflow_direction', { 
+        nodeId, 
+        direction 
+      });
+      const typedResult = result as { name: string, overflowDirection: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `设置节点 "${typedResult.name}" 的滚动方向为 ${typedResult.overflowDirection}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `设置滚动方向出错: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 // Define design strategy prompt
 server.prompt(
   "design_strategy",
@@ -964,7 +1005,8 @@ type FigmaCommand =
   | 'set_corner_radius'
   | 'set_text_content'
   | 'clone_node'
-  | 'set_node_interactions';
+  | 'set_node_interactions'
+  | 'set_overflow_direction';
 
 // Helper function to process Figma node responses
 function processFigmaNodeResponse(result: unknown): any {
