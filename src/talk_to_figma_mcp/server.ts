@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -25,7 +27,7 @@ let ws: WebSocket | null = null;
 const pendingRequests = new Map<string, {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
 }>();
 
 // Track which channel each client is in
@@ -36,6 +38,12 @@ const server = new McpServer({
   name: "TalkToFigmaMCP",
   version: "1.0.0",
 });
+
+// Add command line argument parsing
+const args = process.argv.slice(2);
+const serverArg = args.find(arg => arg.startsWith('--server='));
+const serverUrl = serverArg ? serverArg.split('=')[1] : 'localhost';
+const WS_URL = serverUrl === 'localhost' ? `ws://${serverUrl}` : `wss://${serverUrl}`;
 
 // Document Info Tool
 server.tool(
@@ -49,7 +57,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: JSON.stringify(result)
           }
         ]
       };
@@ -78,7 +86,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: JSON.stringify(result)
           }
         ]
       };
@@ -109,7 +117,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: JSON.stringify(result)
           }
         ]
       };
@@ -119,6 +127,42 @@ server.tool(
           {
             type: "text",
             text: `Error getting node info: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Nodes Info Tool
+server.tool(
+  "get_nodes_info",
+  "Get detailed information about multiple nodes in Figma",
+  {
+    nodeIds: z.array(z.string()).describe("Array of node IDs to get information about")
+  },
+  async ({ nodeIds }) => {
+    try {
+      const results = await Promise.all(
+        nodeIds.map(async (nodeId) => {
+          const result = await sendCommandToFigma('get_node_info', { nodeId });
+          return { nodeId, info: result };
+        })
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(results)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting nodes info: ${error instanceof Error ? error.message : String(error)}`
           }
         ]
       };
@@ -384,6 +428,40 @@ server.tool(
   }
 );
 
+// Clone Node Tool
+server.tool(
+  "clone_node",
+  "Clone an existing node in Figma",
+  {
+    nodeId: z.string().describe("The ID of the node to clone"),
+    x: z.number().optional().describe("New X position for the clone"),
+    y: z.number().optional().describe("New Y position for the clone")
+  },
+  async ({ nodeId, x, y }) => {
+    try {
+      const result = await sendCommandToFigma('clone_node', { nodeId, x, y });
+      const typedResult = result as { name: string, id: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cloned node "${typedResult.name}" with new ID: ${typedResult.id}${x !== undefined && y !== undefined ? ` at position (${x}, ${y})` : ''}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error cloning node: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 // Resize Node Tool
 server.tool(
   "resize_node",
@@ -461,7 +539,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: JSON.stringify(result)
           }
         ]
       };
@@ -490,7 +568,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: JSON.stringify(result)
           }
         ]
       };
@@ -586,17 +664,25 @@ server.tool(
         format: format || 'PNG',
         scale: scale || 1
       });
-      const typedResult = result as { imageData: string, mimeType: string };
+      const typedResult = result as any;
 
+      // return {
+      //   content: [
+      //     {
+      //       type: "image",
+      //       data: typedResult.imageData,
+      //       mimeType: typedResult.mimeType || "image/png"
+      //     }
+      //   ]
+      // };
       return {
         content: [
           {
-            type: "image",
-            data: typedResult.imageData,
-            mimeType: typedResult.mimeType || "image/png"
+            type: "text",
+            text: JSON.stringify(typedResult),
           }
         ]
-      };
+      }
     } catch (error) {
       return {
         content: [
@@ -821,33 +907,10 @@ type FigmaCommand =
   | 'execute_code'
   | 'join'
   | 'set_corner_radius'
-  | 'set_text_content';
+  | 'set_text_content'
+  | 'clone_node';
 
-// Helper function to process Figma node responses
-function processFigmaNodeResponse(result: unknown): any {
-  if (!result || typeof result !== 'object') {
-    return result;
-  }
-
-  // Check if this looks like a node response
-  const resultObj = result as Record<string, unknown>;
-  if ('id' in resultObj && typeof resultObj.id === 'string') {
-    // It appears to be a node response, log the details
-    logger.info(`Processed Figma node: ${resultObj.name || 'Unknown'} (ID: ${resultObj.id})`);
-
-    if ('x' in resultObj && 'y' in resultObj) {
-      logger.debug(`Node position: (${resultObj.x}, ${resultObj.y})`);
-    }
-
-    if ('width' in resultObj && 'height' in resultObj) {
-      logger.debug(`Node dimensions: ${resultObj.width}×${resultObj.height}`);
-    }
-  }
-
-  return result;
-}
-
-// Simple function to connect to Figma WebSocket server
+// Update the connectToFigma function
 function connectToFigma(port: number = 3055) {
   // If already connected, do nothing
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -855,8 +918,9 @@ function connectToFigma(port: number = 3055) {
     return;
   }
 
-  logger.info(`Connecting to Figma socket server on port ${port}...`);
-  ws = new WebSocket(`ws://localhost:${port}`);
+  const wsUrl = serverUrl === 'localhost' ? `${WS_URL}:${port}` : WS_URL;
+  logger.info(`Connecting to Figma socket server at ${wsUrl}...`);
+  ws = new WebSocket(wsUrl);
 
   ws.on('open', () => {
     logger.info('Connected to Figma socket server');
