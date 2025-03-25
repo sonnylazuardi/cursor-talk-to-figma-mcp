@@ -790,6 +790,69 @@ server.tool(
   }
 );
 
+// Add Interactions Tool
+server.tool(
+  "set_node_interactions",
+  "Set interactive behaviors to a node in Figma",
+  {
+    nodeId: z.string().describe("The ID of the node to add interactions to"),
+    interactions: z.array(
+      z.object({
+        actionType: z.enum([
+          "NAVIGATE",
+          "URL", 
+          "OPEN_NODE", 
+          "OVERLAY", 
+          "SWAP", 
+          "BACK", 
+          "CLOSE"
+        ]).describe("Type of interaction action"),
+        triggerType: z.enum([
+          "ON_CLICK",
+          "ON_HOVER",
+          "ON_PRESS",
+          "ON_DRAG"
+        ]).default("ON_CLICK").describe("Type of trigger (default: ON_CLICK)"),
+        // Optional parameters based on action type
+        destination: z.string().optional().describe("For NAVIGATE: Target page ID"),
+        transition: z.object({
+          type: z.enum(["NONE", "DISSOLVE", "SMART_ANIMATE", "MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"])
+        }).optional().describe("For NAVIGATE: Transition effect"),
+        url: z.string().optional().describe("For URL: Web URL to open"),
+        targetNodeId: z.string().optional().describe("For OPEN_NODE/OVERLAY: Target node ID"),
+        preserveScrollPosition: z.boolean().optional().describe("For OVERLAY: Preserve scroll position"),
+        componentId: z.string().optional().describe("For SWAP: Component ID to swap to")
+      })
+    ).describe("Array of interactions to add to the node")
+  },
+  async ({ nodeId, interactions }) => {
+    try {
+      const result = await sendCommandToFigma('set_node_interactions', { 
+        nodeId, 
+        interactions 
+      });
+      const typedResult = result as { name: string, interactionsCount: number };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully added ${typedResult.interactionsCount} interactions to node "${typedResult.name}"`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error adding interactions: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 // Define design strategy prompt
 server.prompt(
   "design_strategy",
@@ -900,7 +963,8 @@ type FigmaCommand =
   | 'join'
   | 'set_corner_radius'
   | 'set_text_content'
-  | 'clone_node';
+  | 'clone_node'
+  | 'set_node_interactions';
 
 // Helper function to process Figma node responses
 function processFigmaNodeResponse(result: unknown): any {
