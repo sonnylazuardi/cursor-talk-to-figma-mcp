@@ -371,11 +371,20 @@
       // Initialize UI
       function updateConnectionStatus(isConnected, message) {
         state.connected = isConnected;
-        connectionStatus.innerHTML =
+        const useLocalhost = document.getElementById("use-localhost").checked;
+
+        let statusMessage =
           message ||
           (isConnected
             ? "Connected to Cursor MCP server"
             : "Not connected to Cursor MCP server");
+
+        // Add instructions for localhost when disconnected
+        if (!isConnected && useLocalhost) {
+          statusMessage += `<br><br>Run this in your terminal, then connect<br><code>bunx cursor-talk-to-figma-socket</code>`;
+        }
+
+        connectionStatus.innerHTML = statusMessage;
         connectionStatus.className = `status ${
           isConnected ? "connected" : "disconnected"
         }`;
