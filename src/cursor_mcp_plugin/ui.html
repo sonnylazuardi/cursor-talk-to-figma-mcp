@@ -323,12 +323,6 @@
           ></textarea>
           <button id="btn-copy" class="secondary">Copy to Clipboard</button>
         </div>
-
-        <div class="section">
-          <button id="btn-disconnect" class="secondary" disabled>
-            Disconnect
-          </button>
-        </div>
       </div>
 
       <div id="content-about" class="tab-content">
@@ -368,7 +362,6 @@
       // UI Elements
       const portInput = document.getElementById("port");
       const connectButton = document.getElementById("btn-connect");
-      const disconnectButton = document.getElementById("btn-disconnect");
       const connectionStatus = document.getElementById("connection-status");
 
       // Tabs
@@ -387,8 +380,9 @@
           isConnected ? "connected" : "disconnected"
         }`;
 
-        connectButton.disabled = isConnected;
-        disconnectButton.disabled = !isConnected;
+        // Update connect button text and style based on connection state
+        connectButton.textContent = isConnected ? "Disconnect" : "Connect";
+        connectButton.className = isConnected ? "secondary" : "primary";
         portInput.disabled = isConnected;
 
         // Show/hide MCP config section
@@ -644,19 +638,18 @@
         });
       });
 
-      // Connect to server
+      // Replace the separate connect/disconnect button listeners with a single toggle
       connectButton.addEventListener("click", () => {
-        const port = parseInt(portInput.value, 10) || 3055;
-        updateConnectionStatus(false, "Connecting...");
-        connectionStatus.className = "status info";
-        connectToServer(port);
-      });
-
-      // Disconnect from server
-      disconnectButton.addEventListener("click", () => {
-        updateConnectionStatus(false, "Disconnecting...");
-        connectionStatus.className = "status info";
-        disconnectFromServer();
+        if (state.connected) {
+          updateConnectionStatus(false, "Disconnecting...");
+          connectionStatus.className = "status info";
+          disconnectFromServer();
+        } else {
+          const port = parseInt(portInput.value, 10) || 3055;
+          updateConnectionStatus(false, "Connecting...");
+          connectionStatus.className = "status info";
+          connectToServer(port);
+        }
       });
 
       // Listen for messages from the plugin code
@@ -672,7 +665,7 @@
             connectButton.click();
             break;
           case "auto-disconnect":
-            disconnectButton.click();
+            connectButton.click();
             break;
           case "command-result":
             // Forward the result from plugin code back to WebSocket
