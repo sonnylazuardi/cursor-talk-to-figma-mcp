@@ -722,6 +722,10 @@
       document
         .getElementById("use-localhost")
         .addEventListener("change", () => {
+          // If connected, disconnect first
+          if (state.connected) {
+            disconnectFromServer();
+          }
           updatePortVisibility();
           if (state.connected) {
             updateMcpConfig();
