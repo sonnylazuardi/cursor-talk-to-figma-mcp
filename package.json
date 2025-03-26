@@ -1,11 +1,11 @@
 {
-  "name": "cursor-talk-to-figma-mcp",
-  "description": "Cursor Talk to Figma MCP",
-  "version": "0.1.1",
-  "module": "dist/server.js",
-  "main": "dist/server.js",
+  "name": "cursor-talk-to-figma-socket",
+  "description": "Cursor Talk to Figma Socket",
+  "version": "0.0.3",
+  "module": "dist/socket.js",
+  "main": "dist/socket.js",
   "bin": {
-    "cursor-talk-to-figma-mcp": "dist/server.js"
+    "cursor-talk-to-figma-socket": "dist/socket.js"
   },
   "files": [
     "dist",
@@ -13,8 +13,8 @@
   ],
   "type": "module",
   "scripts": {
-    "start": "bun run dist/server.js",
-    "socket": "bun run src/socket.ts",
+    "start": "bun run dist/socket.js",
+    "socket": "bun run dist/socket.js",
     "setup": "./scripts/setup.sh",
     "build": "tsup",
     "build:watch": "tsup --watch",

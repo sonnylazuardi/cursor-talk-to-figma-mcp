@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Server, ServerWebSocket } from "bun";
 
 // Store clients by channel
