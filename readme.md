@@ -1,8 +1,13 @@
-# Cursor Talk to Figma MCP
+# Cursor Talk to Figma MCP for Windows
 
 This project implements a Model Context Protocol (MCP) integration between Cursor AI and Figma, allowing Cursor to communicate with Figma for reading designs and modifying them programmatically.
 
-https://github.com/user-attachments/assets/129a14d2-ed73-470f-9a4c-2240b2a4885c
+## Prerequisites
+
+- Windows 10 or later
+- [Bun](https://bun.sh) installed on Windows
+- [Figma Desktop App](https://www.figma.com/downloads/)
+- [Cursor Editor](https://cursor.sh/)
 
 ## Project Structure
 
@@ -10,176 +15,118 @@ https://github.com/user-attachments/assets/129a14d2-ed73-470f-9a4c-2240b2a4885c
 - `src/cursor_mcp_plugin/` - Figma plugin for communicating with Cursor
 - `src/socket.ts` - WebSocket server that facilitates communication between the MCP server and Figma plugin
 
-## Get Started
+## Windows Installation Steps
 
-1. Install Bun if you haven't already:
+1. **Install Bun on Windows**
+   ```powershell
+   powershell -Command "iwr bun.sh/install.ps1 -useb | iex"
+   ```
+   After installation, restart your terminal.
 
-```bash
-curl -fsSL https://bun.sh/install | bash
-```
+2. **Clone the repository**
+   ```powershell
+   git clone https://github.com/MehhdiMarzban/cursor-talk-to-figma-mcp.git
+   cd cursor-talk-to-figma-mcp
+   ```
 
-2. Run setup, this will also install MCP in your Cursor's active project
+3. **Install dependencies**
+   ```powershell
+   bun install
+   ```
 
-```bash
-bun setup
-```
+4. **Setup MCP Configuration**
+   Create `.cursor/mcp.json` in your project root:
+   ```powershell
+   mkdir .cursor
+   ```
+   
+   Create `mcp.json` with the following content:
+   ```json
+   {
+     "mcpServers": {
+       "TalkToFigma": {
+         "command": "bun",
+         "args": [
+           "C:/Users/mehdi/Desktop/cursor-talk-to-figma-mcp/src/talk_to_figma_mcp/server.ts"
+         ]
+       }
+     }
+   }
+   ```
 
-3. Start the Websocket server
+5. **Start the WebSocket Server**
+   ```powershell
+   bun start
+   ```
 
-```bash
-bun socket
-```
+## Figma Plugin Setup
 
-4. MCP server
-
-```bash
-bunx cursor-talk-to-figma-mcp
-```
-
-5. Install [Figma Plugin](#figma-plugin)
-
-# Quick Video Tutorial
-
-[![image](images/tutorial.jpg)](https://www.linkedin.com/posts/sonnylazuardi_just-wanted-to-share-my-latest-experiment-activity-7307821553654657024-yrh8)
-
-## Manual Setup and Installation
-
-### MCP Server: Integration with Cursor
-
-Add the server to your Cursor MCP configuration in `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "TalkToFigma": {
-      "command": "bunx",
-      "args": ["cursor-talk-to-figma-mcp"]
-    }
-  }
-}
-```
-
-### WebSocket Server
-
-Start the WebSocket server:
-
-```bash
-bun socket
-```
-
-### Figma Plugin
-
-1. In Figma, go to Plugins > Development > New Plugin
-2. Choose "Link existing plugin"
-3. Select the `src/cursor_mcp_plugin/manifest.json` file
-4. The plugin should now be available in your Figma development plugins
-
-## Windows + WSL Guide
-
-1. Install bun via powershell
-
-```bash
-powershell -c "irm bun.sh/install.ps1|iex"
-```
-
-2. Uncomment the hostname `0.0.0.0` in `src/socket.ts`
-
-```typescript
-// uncomment this to allow connections in windows wsl
-hostname: "0.0.0.0",
-```
-
-3. Start the websocket
-
-```bash
-bun socket
-```
+1. Open Figma Desktop App
+2. Go to Plugins > Development > New Plugin
+3. Choose "Link existing plugin"
+4. Select the `src/cursor_mcp_plugin/manifest.json` file from this project
+5. The plugin will now be available in your Figma development plugins
 
 ## Usage
 
-1. Start the WebSocket server
-2. Install the MCP server in Cursor
-3. Open Figma and run the Cursor MCP Plugin
-4. Connect the plugin to the WebSocket server by joining a channel using `join_channel`
-5. Use Cursor to communicate with Figma using the MCP tools
+1. Start the WebSocket server using `bun start`
+2. Open your Figma document
+3. Run the "Cursor MCP Plugin" from your Figma development plugins
+4. In Cursor, use the following commands to interact with Figma:
+   ```
+   mcp_TalkToFigma_join_channel  // Connect to Figma
+   mcp_TalkToFigma_get_document_info  // Get document information
+   ```
 
-## MCP Tools
-
-The MCP server provides the following tools for interacting with Figma:
+## Available MCP Tools
 
 ### Document & Selection
-
 - `get_document_info` - Get information about the current Figma document
 - `get_selection` - Get information about the current selection
 - `get_node_info` - Get detailed information about a specific node
-- `get_nodes_info` - Get detailed information about multiple nodes by providing an array of node IDs
 
 ### Creating Elements
-
-- `create_rectangle` - Create a new rectangle with position, size, and optional name
-- `create_frame` - Create a new frame with position, size, and optional name
-- `create_text` - Create a new text node with customizable font properties
-
-### Modifying text content
-
-- `set_text_content` - Set the text content of an existing text node
+- `create_rectangle` - Create a new rectangle
+- `create_frame` - Create a new frame
+- `create_text` - Create a new text element
 
 ### Styling
-
-- `set_fill_color` - Set the fill color of a node (RGBA)
-- `set_stroke_color` - Set the stroke color and weight of a node
-- `set_corner_radius` - Set the corner radius of a node with optional per-corner control
+- `set_fill_color` - Set the fill color of a node
+- `set_stroke_color` - Set the stroke color of a node
+- `set_corner_radius` - Set the corner radius of a node
 
 ### Layout & Organization
-
 - `move_node` - Move a node to a new position
-- `resize_node` - Resize a node with new dimensions
+- `resize_node` - Resize a node
 - `delete_node` - Delete a node
-- `clone_node` - Create a copy of an existing node with optional position offset
 
 ### Components & Styles
-
-- `get_styles` - Get information about local styles
-- `get_local_components` - Get information about local components
-- `get_team_components` - Get information about team components
+- `get_styles` - Get all styles from the document
+- `get_local_components` - Get all local components
 - `create_component_instance` - Create an instance of a component
 
-### Export & Advanced
+### Export
+- `export_node_as_image` - Export a node as an image
 
-- `export_node_as_image` - Export a node as an image (PNG, JPG, SVG, or PDF)
-- `execute_figma_code` - Execute arbitrary JavaScript code in Figma (use with caution)
+## Troubleshooting
 
-### Connection Management
-
-- `join_channel` - Join a specific channel to communicate with Figma
-
-## Development
-
-### Building the Figma Plugin
-
-1. Navigate to the Figma plugin directory:
-
-   ```
-   cd src/cursor_mcp_plugin
+1. **Port 3055 Already in Use**
+   ```powershell
+   # Find process using port 3055
+   netstat -ano | findstr :3055
+   
+   # Kill the process (replace PID with the actual process ID)
+   taskkill /PID PID /F
    ```
 
-2. Edit code.js and ui.html
-
-## Best Practices
-
-When working with the Figma MCP:
-
-1. Always join a channel before sending commands
-2. Get document overview using `get_document_info` first
-3. Check current selection with `get_selection` before modifications
-4. Use appropriate creation tools based on needs:
-   - `create_frame` for containers
-   - `create_rectangle` for basic shapes
-   - `create_text` for text elements
-5. Verify changes using `get_node_info`
-6. Use component instances when possible for consistency
-7. Handle errors appropriately as all commands can throw exceptions
+2. **Bun Command Not Found**
+   - Restart your terminal after installing Bun
+   - Make sure Bun is added to your system PATH
 
 ## License
 
 MIT
+
+## Acknowledgments
+
+This project is based on [cursor-talk-to-figma-mcp](https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp) by [Sonny Lazuardi](https://github.com/sonnylazuardi), which is licensed under the MIT License.
