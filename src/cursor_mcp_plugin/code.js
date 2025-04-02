@@ -107,6 +107,10 @@ async function handleCommand(command, params) {
       return await setTextContent(params);
     case "clone_node":
       return await cloneNode(params);
+    case "set_node_interactions":
+      return await setNodeInteractions(params);
+    case "set_overflow_direction":
+      return await setOverflowDirection(params);
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -1179,5 +1183,110 @@ async function cloneNode(params) {
     y: "y" in clone ? clone.y : undefined,
     width: "width" in clone ? clone.width : undefined,
     height: "height" in clone ? clone.height : undefined,
+  };
+}
+
+// Add the setNodeInteractions function implementation
+async function setNodeInteractions(params) {
+  const { nodeId, interactions } = params || {};
+
+  if (!nodeId) {
+    throw new Error("Missing nodeId parameter");
+  }
+
+  if (!interactions || !Array.isArray(interactions)) {
+    throw new Error("Missing or invalid interactions parameter");
+  }
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error(`Node not found with ID: ${nodeId}`);
+  }
+
+  try {
+    // Use Figma API's setReactionsAsync to set interactions
+    await node.setReactionsAsync(interactions.map(interaction => {
+      let actionObj = {
+        type: interaction.actionType
+      };
+      
+      // Add different parameters based on action type
+      if (interaction.actionType === "NAVIGATE") {
+        actionObj.destination = interaction.destination;
+        actionObj.transition = interaction.transition || { type: "NONE" };
+      } else if (interaction.actionType === "URL") {
+        actionObj.url = interaction.url;
+      } else if (interaction.actionType === "OPEN_NODE") {
+        actionObj.nodeId = interaction.targetNodeId;
+      } else if (interaction.actionType === "OVERLAY") {
+        actionObj.nodeId = interaction.targetNodeId;
+        actionObj.preserveScrollPosition = interaction.preserveScrollPosition || false;
+      } else if (interaction.actionType === "SWAP") {
+        actionObj.componentId = interaction.componentId;
+      }
+      
+      return {
+        actions: [actionObj],
+        trigger: {
+          type: interaction.triggerType || "ON_CLICK",
+        }
+      };
+    }));
+
+    return {
+      id: node.id,
+      name: node.name,
+      interactionsCount: interactions.length,
+    };
+  } catch (error) {
+    console.error("Complete error object:", error);
+    throw new Error(`Error setting interactions: ${error.message || "Unknown error"}`);
+  }
+}
+
+// Add the setOverflowDirection function implementation
+async function setOverflowDirection(params) {
+  const { nodeId, direction } = params || {};
+
+  if (!nodeId) {
+    throw new Error("Missing nodeId parameter");
+  }
+
+  if (!direction) {
+    throw new Error("Missing direction parameter");
+  }
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error(`Node not found with ID: ${nodeId}`);
+  }
+
+  // 检查节点是否支持overflowDirection属性
+  if (!("overflowDirection" in node)) {
+    throw new Error(`Node does not support overflow direction: ${nodeId}`);
+  }
+
+  // 设置overflowDirection
+  switch (direction.toUpperCase()) {
+    case "NONE":
+      node.overflowDirection = "NONE";
+      break;
+    case "HORIZONTAL":
+      node.overflowDirection = "HORIZONTAL";
+      break;
+    case "VERTICAL":
+      node.overflowDirection = "VERTICAL";
+      break;
+    case "BOTH":
+      node.overflowDirection = "BOTH";
+      break;
+    default:
+      throw new Error(`Invalid overflow direction: ${direction}`);
+  }
+
+  return {
+    id: node.id,
+    name: node.name,
+    overflowDirection: node.overflowDirection
   };
 }
