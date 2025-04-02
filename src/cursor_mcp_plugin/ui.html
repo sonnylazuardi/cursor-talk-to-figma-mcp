@@ -707,8 +707,11 @@
             TalkToFigma: {
               command: "bunx",
               args: useLocalhost
-                ? ["cursor-talk-to-figma-mcp"]
-                : ["cursor-talk-to-figma-mcp", "--server=vps.sonnylab.com"],
+                ? ["cursor-talk-to-figma-mcp@latest"]
+                : [
+                    "cursor-talk-to-figma-mcp@latest",
+                    "--server=vps.sonnylab.com",
+                  ],
             },
           },
         };
