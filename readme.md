@@ -71,6 +71,7 @@ Replace `C:/path/to/your` with your actual project path.
 6. Start the WebSocket server:
 
 ```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\start.ps1
 ```
 
@@ -151,6 +152,7 @@ The WebSocket server must be running for the MCP to communicate with Figma.
 For Windows:
 
 ```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\start.ps1
 ```
 
