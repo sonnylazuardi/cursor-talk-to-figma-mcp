@@ -105,55 +105,44 @@ bun setup
 
 3. Start the Websocket server
 
-For Linux/Mac:
-
 ```bash
-bun start
+bun socket
 ```
 
-4. Install [Figma Plugin](#figma-plugin)
+4. MCP server
 
-# Quick Video Tutorial
+```bash
+bunx cursor-talk-to-figma-mcp
+```
+
+5. Install [Figma Plugin](#figma-plugin)
+
+## Quick Video Tutorial
 
 [![image](images/tutorial.jpg)](https://www.linkedin.com/posts/sonnylazuardi_just-wanted-to-share-my-latest-experiment-activity-7307821553654657024-yrh8)
+
+## Design Automation Example
+
+**Bulk text content replacement**
+
+Thanks to [@dusskapark](https://github.com/dusskapark) for contributing the bulk text replacement feature. Here is the [demo video](https://www.youtube.com/watch?v=j05gGT3xfCs).
 
 ## Manual Setup and Installation
 
 ### MCP Server: Integration with Cursor
 
-The MCP server configuration should be added to your global Cursor configuration:
-
-For Windows (in `%USERPROFILE%\.cursor\mcp.json`):
+Add the server to your Cursor MCP configuration in `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "TalkToFigma": {
-      "command": "%USERPROFILE%\\.bun\\bin\\bun.exe",
-      "args": [
-        "C:/path/to/your/cursor-talk-to-figma-mcp/src/talk_to_figma_mcp/server.ts"
-      ]
+      "command": "bunx",
+      "args": ["cursor-talk-to-figma-mcp@latest"]
     }
   }
 }
 ```
-
-For Linux/Mac (in `~/.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "TalkToFigma": {
-      "command": "bun",
-      "args": [
-        "/path/to/cursor-talk-to-figma-mcp/src/talk_to_figma_mcp/server.ts"
-      ]
-    }
-  }
-}
-```
-
-Note: Replace the paths with your actual project path. Use forward slashes (/) even on Windows.
 
 ### WebSocket Server
 
@@ -168,16 +157,36 @@ For Windows:
 For Linux/Mac:
 
 ```bash
-bun start
+bun socket
 ```
 
 ### Figma Plugin
 
-1. In Figma, go to Plugins > Development > Import plugin from manifest
-2. Select the `src/cursor_mcp_plugin/manifest.json` file from your project
-3. The plugin will appear as "Cursor MCP Plugin" in your development plugins
-4. Run the plugin and note the channel ID shown in the plugin window
-5. Use this channel ID with the `join_channel` command in Cursor
+1. In Figma, go to Plugins > Development > New Plugin
+2. Choose "Link existing plugin"
+3. Select the `src/cursor_mcp_plugin/manifest.json` file
+4. The plugin should now be available in your Figma development plugins
+
+## Windows + WSL Guide
+
+1. Install bun via powershell
+
+```bash
+powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+2. Uncomment the hostname `0.0.0.0` in `src/socket.ts`
+
+```typescript
+// uncomment this to allow connections in windows wsl
+hostname: "0.0.0.0",
+```
+
+3. Start the websocket
+
+```bash
+bun socket
+```
 
 ## Usage
 
@@ -196,6 +205,14 @@ The MCP server provides the following tools for interacting with Figma:
 - `get_document_info` - Get information about the current Figma document
 - `get_selection` - Get information about the current selection
 - `get_node_info` - Get detailed information about a specific node
+- `get_nodes_info` - Get detailed information about multiple nodes by providing an array of node IDs
+
+### Annotations
+
+- `get_annotations` - Get all annotations in the current document or specific node
+- `set_annotation` - Create or update an annotation with markdown support
+- `set_multiple_annotations` - Batch create/update multiple annotations efficiently
+- `scan_nodes_by_types` - Scan for nodes with specific types (useful for finding annotation targets)
 
 ### Creating Elements
 
@@ -205,7 +222,9 @@ The MCP server provides the following tools for interacting with Figma:
 
 ### Modifying text content
 
-- `set_text_content` - Set the text content of an existing text node
+- `scan_text_nodes` - Scan text nodes with intelligent chunking for large designs
+- `set_text_content` - Set the text content of a single text node
+- `set_multiple_text_contents` - Batch update multiple text nodes efficiently
 
 ### Styling
 
@@ -218,6 +237,8 @@ The MCP server provides the following tools for interacting with Figma:
 - `move_node` - Move a node to a new position
 - `resize_node` - Resize a node with new dimensions
 - `delete_node` - Delete a node
+- `delete_multiple_nodes` - Delete multiple nodes at once efficiently
+- `clone_node` - Create a copy of an existing node with optional position offset
 
 ### Components & Styles
 
@@ -261,6 +282,22 @@ When working with the Figma MCP:
 5. Verify changes using `get_node_info`
 6. Use component instances when possible for consistency
 7. Handle errors appropriately as all commands can throw exceptions
+8. For large designs:
+   - Use chunking parameters in `scan_text_nodes`
+   - Monitor progress through WebSocket updates
+   - Implement appropriate error handling
+9. For text operations:
+   - Use batch operations when possible
+   - Consider structural relationships
+   - Verify changes with targeted exports
+10. For converting legacy annotations:
+    - Scan text nodes to identify numbered markers and descriptions
+    - Use `scan_nodes_by_types` to find UI elements that annotations refer to
+    - Match markers with their target elements using path, name, or proximity
+    - Categorize annotations appropriately with `get_annotations`
+    - Create native annotations with `set_multiple_annotations` in batches
+    - Verify all annotations are properly linked to their targets
+    - Delete legacy annotation nodes after successful conversion
 
 ## License
 
