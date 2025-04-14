@@ -6,8 +6,6 @@ import { z } from "zod";
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
 
-import path from "path";
-
 // Define TypeScript interfaces for Figma responses
 interface FigmaResponse {
   id: string;
@@ -188,6 +186,11 @@ server.tool(
 );
 
 function rgbaToHex(color: any): string {
+  // skip if color is already hex
+  if (color.startsWith('#')) {
+    return color;
+  }
+
   const r = Math.round(color.r * 255);
   const g = Math.round(color.g * 255);
   const b = Math.round(color.b * 255);
@@ -411,6 +414,23 @@ server.tool(
       .optional()
       .describe("Stroke color in RGBA format"),
     strokeWeight: z.number().positive().optional().describe("Stroke weight"),
+    layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().describe("Auto-layout mode for the frame"),
+    layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children"),
+    paddingTop: z.number().optional().describe("Top padding for auto-layout frame"),
+    paddingRight: z.number().optional().describe("Right padding for auto-layout frame"),
+    paddingBottom: z.number().optional().describe("Bottom padding for auto-layout frame"),
+    paddingLeft: z.number().optional().describe("Left padding for auto-layout frame"),
+    primaryAxisAlignItems: z
+      .enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"])
+      .optional()
+      .describe("Primary axis alignment for auto-layout frame. Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
+    counterAxisAlignItems: z.enum(["MIN", "MAX", "CENTER", "BASELINE"]).optional().describe("Counter axis alignment for auto-layout frame"),
+    layoutSizingHorizontal: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Horizontal sizing mode for auto-layout frame"),
+    layoutSizingVertical: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Vertical sizing mode for auto-layout frame"),
+    itemSpacing: z
+      .number()
+      .optional()
+      .describe("Distance between children in auto-layout frame. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN.")
   },
   async ({
     x,
@@ -422,6 +442,17 @@ server.tool(
     fillColor,
     strokeColor,
     strokeWeight,
+    layoutMode,
+    layoutWrap,
+    paddingTop,
+    paddingRight,
+    paddingBottom,
+    paddingLeft,
+    primaryAxisAlignItems,
+    counterAxisAlignItems,
+    layoutSizingHorizontal,
+    layoutSizingVertical,
+    itemSpacing
   }) => {
     try {
       const result = await sendCommandToFigma("create_frame", {
@@ -434,6 +465,17 @@ server.tool(
         fillColor: fillColor || { r: 1, g: 1, b: 1, a: 1 },
         strokeColor: strokeColor,
         strokeWeight: strokeWeight,
+        layoutMode,
+        layoutWrap,
+        paddingTop,
+        paddingRight,
+        paddingBottom,
+        paddingLeft,
+        primaryAxisAlignItems,
+        counterAxisAlignItems,
+        layoutSizingHorizontal,
+        layoutSizingVertical,
+        itemSpacing
       });
       const typedResult = result as { name: string; id: string };
       return {
@@ -488,7 +530,7 @@ server.tool(
     name: z
       .string()
       .optional()
-      .describe("Optional name for the text node by default following text"),
+      .describe("Semantic layer name for the text node"),
     parentId: z
       .string()
       .optional()
@@ -1127,35 +1169,6 @@ server.tool(
     }
   }
 );
-
-// Get Team Components Tool
-// server.tool(
-//   "get_team_components",
-//   "Get all team library components available in Figma",
-//   {},
-//   async () => {
-//     try {
-//       const result = await sendCommandToFigma('get_team_components');
-//       return {
-//         content: [
-//           {
-//             type: "text",
-//             text: JSON.stringify(result, null, 2)
-//           }
-//         ]
-//       };
-//     } catch (error) {
-//       return {
-//         content: [
-//           {
-//             type: "text",
-//             text: `Error getting team components: ${error instanceof Error ? error.message : String(error)}`
-//           }
-//         ]
-//       };
-//     }
-//   }
-// );
 
 // Create Component Instance Tool
 server.tool(
@@ -1912,6 +1925,242 @@ This strategy focuses on practical implementation based on real-world usage patt
   }
 );
 
+// Set Layout Mode Tool
+server.tool(
+  "set_layout_mode",
+  "Set the layout mode and wrap behavior of a frame in Figma",
+  {
+    nodeId: z.string().describe("The ID of the frame to modify"),
+    layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).describe("Layout mode for the frame"),
+    layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children")
+  },
+  async ({ nodeId, layoutMode, layoutWrap }) => {
+    try {
+      const result = await sendCommandToFigma("set_layout_mode", {
+        nodeId,
+        layoutMode,
+        layoutWrap: layoutWrap || "NO_WRAP"
+      });
+      const typedResult = result as { name: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set layout mode of frame "${typedResult.name}" to ${layoutMode}${layoutWrap ? ` with ${layoutWrap}` : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting layout mode: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Padding Tool
+server.tool(
+  "set_padding",
+  "Set padding values for an auto-layout frame in Figma",
+  {
+    nodeId: z.string().describe("The ID of the frame to modify"),
+    paddingTop: z.number().optional().describe("Top padding value"),
+    paddingRight: z.number().optional().describe("Right padding value"),
+    paddingBottom: z.number().optional().describe("Bottom padding value"),
+    paddingLeft: z.number().optional().describe("Left padding value"),
+  },
+  async ({ nodeId, paddingTop, paddingRight, paddingBottom, paddingLeft }) => {
+    try {
+      const result = await sendCommandToFigma("set_padding", {
+        nodeId,
+        paddingTop,
+        paddingRight,
+        paddingBottom,
+        paddingLeft,
+      });
+      const typedResult = result as { name: string };
+
+      // Create a message about which padding values were set
+      const paddingMessages = [];
+      if (paddingTop !== undefined) paddingMessages.push(`top: ${paddingTop}`);
+      if (paddingRight !== undefined) paddingMessages.push(`right: ${paddingRight}`);
+      if (paddingBottom !== undefined) paddingMessages.push(`bottom: ${paddingBottom}`);
+      if (paddingLeft !== undefined) paddingMessages.push(`left: ${paddingLeft}`);
+
+      const paddingText = paddingMessages.length > 0
+        ? `padding (${paddingMessages.join(', ')})`
+        : "padding";
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${paddingText} for frame "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting padding: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Axis Align Tool
+server.tool(
+  "set_axis_align",
+  "Set primary and counter axis alignment for an auto-layout frame in Figma",
+  {
+    nodeId: z.string().describe("The ID of the frame to modify"),
+    primaryAxisAlignItems: z
+      .enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"])
+      .optional()
+      .describe("Primary axis alignment (MIN/MAX = left/right in horizontal, top/bottom in vertical). Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
+    counterAxisAlignItems: z
+      .enum(["MIN", "MAX", "CENTER", "BASELINE"])
+      .optional()
+      .describe("Counter axis alignment (MIN/MAX = top/bottom in horizontal, left/right in vertical)")
+  },
+  async ({ nodeId, primaryAxisAlignItems, counterAxisAlignItems }) => {
+    try {
+      const result = await sendCommandToFigma("set_axis_align", {
+        nodeId,
+        primaryAxisAlignItems,
+        counterAxisAlignItems
+      });
+      const typedResult = result as { name: string };
+
+      // Create a message about which alignments were set
+      const alignMessages = [];
+      if (primaryAxisAlignItems !== undefined) alignMessages.push(`primary: ${primaryAxisAlignItems}`);
+      if (counterAxisAlignItems !== undefined) alignMessages.push(`counter: ${counterAxisAlignItems}`);
+
+      const alignText = alignMessages.length > 0
+        ? `axis alignment (${alignMessages.join(', ')})`
+        : "axis alignment";
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${alignText} for frame "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting axis alignment: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Layout Sizing Tool
+server.tool(
+  "set_layout_sizing",
+  "Set horizontal and vertical sizing modes for an auto-layout frame in Figma",
+  {
+    nodeId: z.string().describe("The ID of the frame to modify"),
+    layoutSizingHorizontal: z
+      .enum(["FIXED", "HUG", "FILL"])
+      .optional()
+      .describe("Horizontal sizing mode (HUG for frames/text only, FILL for auto-layout children only)"),
+    layoutSizingVertical: z
+      .enum(["FIXED", "HUG", "FILL"])
+      .optional()
+      .describe("Vertical sizing mode (HUG for frames/text only, FILL for auto-layout children only)")
+  },
+  async ({ nodeId, layoutSizingHorizontal, layoutSizingVertical }) => {
+    try {
+      const result = await sendCommandToFigma("set_layout_sizing", {
+        nodeId,
+        layoutSizingHorizontal,
+        layoutSizingVertical
+      });
+      const typedResult = result as { name: string };
+
+      // Create a message about which sizing modes were set
+      const sizingMessages = [];
+      if (layoutSizingHorizontal !== undefined) sizingMessages.push(`horizontal: ${layoutSizingHorizontal}`);
+      if (layoutSizingVertical !== undefined) sizingMessages.push(`vertical: ${layoutSizingVertical}`);
+
+      const sizingText = sizingMessages.length > 0
+        ? `layout sizing (${sizingMessages.join(', ')})`
+        : "layout sizing";
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${sizingText} for frame "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting layout sizing: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Item Spacing Tool
+server.tool(
+  "set_item_spacing",
+  "Set distance between children in an auto-layout frame",
+  {
+    nodeId: z.string().describe("The ID of the frame to modify"),
+    itemSpacing: z.number().describe("Distance between children. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN.")
+  },
+  async ({ nodeId, itemSpacing }) => {
+    try {
+      const result = await sendCommandToFigma("set_item_spacing", {
+        nodeId,
+        itemSpacing
+      });
+      const typedResult = result as { name: string };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set item spacing to ${itemSpacing} for frame "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting item spacing: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  }
+);
 
 // Define command types and parameters
 type FigmaCommand =
@@ -1931,7 +2180,6 @@ type FigmaCommand =
   | "delete_multiple_nodes"
   | "get_styles"
   | "get_local_components"
-  | "get_team_components"
   | "create_component_instance"
   | "export_node_as_image"
   | "join"
@@ -1943,159 +2191,12 @@ type FigmaCommand =
   | "get_annotations"
   | "set_annotation"
   | "set_multiple_annotations"
-  | "scan_nodes_by_types";
-
-type CommandParams = {
-  get_document_info: Record<string, never>;
-  get_selection: Record<string, never>;
-  get_node_info: { nodeId: string };
-  get_nodes_info: { nodeIds: string[] };
-  create_rectangle: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    name?: string;
-    parentId?: string;
-  };
-  create_frame: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    name?: string;
-    parentId?: string;
-    fillColor?: { r: number; g: number; b: number; a?: number };
-    strokeColor?: { r: number; g: number; b: number; a?: number };
-    strokeWeight?: number;
-  };
-  create_text: {
-    x: number;
-    y: number;
-    text: string;
-    fontSize?: number;
-    fontWeight?: number;
-    fontColor?: { r: number; g: number; b: number; a?: number };
-    name?: string;
-    parentId?: string;
-  };
-  set_fill_color: {
-    nodeId: string;
-    r: number;
-    g: number;
-    b: number;
-    a?: number;
-  };
-  set_stroke_color: {
-    nodeId: string;
-    r: number;
-    g: number;
-    b: number;
-    a?: number;
-    weight?: number;
-  };
-  move_node: {
-    nodeId: string;
-    x: number;
-    y: number;
-  };
-  resize_node: {
-    nodeId: string;
-    width: number;
-    height: number;
-  };
-  delete_node: {
-    nodeId: string;
-  };
-  delete_multiple_nodes: {
-    nodeIds: string[];
-  };
-  get_styles: Record<string, never>;
-  get_local_components: Record<string, never>;
-  get_team_components: Record<string, never>;
-  create_component_instance: {
-    componentKey: string;
-    x: number;
-    y: number;
-  };
-  export_node_as_image: {
-    nodeId: string;
-    format?: "PNG" | "JPG" | "SVG" | "PDF";
-    scale?: number;
-  };
-  execute_code: {
-    code: string;
-  };
-  join: {
-    channel: string;
-  };
-  set_corner_radius: {
-    nodeId: string;
-    radius: number;
-    corners?: boolean[];
-  };
-  clone_node: {
-    nodeId: string;
-    x?: number;
-    y?: number;
-  };
-  set_text_content: {
-    nodeId: string;
-    text: string;
-  };
-  scan_text_nodes: {
-    nodeId: string;
-    useChunking: boolean;
-    chunkSize: number;
-  };
-  set_multiple_text_contents: {
-    nodeId: string;
-    text: Array<{ nodeId: string; text: string }>;
-  };
-  get_annotations: {
-    nodeId?: string;
-    includeCategories?: boolean;
-  };
-  set_annotation: {
-    nodeId: string;
-    annotationId?: string;
-    labelMarkdown: string;
-    categoryId?: string;
-    properties?: Array<{ type: string }>;
-  };
-  set_multiple_annotations: SetMultipleAnnotationsParams;
-  scan_nodes_by_types: {
-    nodeId: string;
-    types: Array<string>;
-  };
-};
-
-// Helper function to process Figma node responses
-function processFigmaNodeResponse(result: unknown): any {
-  if (!result || typeof result !== "object") {
-    return result;
-  }
-
-  // Check if this looks like a node response
-  const resultObj = result as Record<string, unknown>;
-  if ("id" in resultObj && typeof resultObj.id === "string") {
-    // It appears to be a node response, log the details
-    console.info(
-      `Processed Figma node: ${resultObj.name || "Unknown"} (ID: ${resultObj.id
-      })`
-    );
-
-    if ("x" in resultObj && "y" in resultObj) {
-      console.debug(`Node position: (${resultObj.x}, ${resultObj.y})`);
-    }
-
-    if ("width" in resultObj && "height" in resultObj) {
-      console.debug(`Node dimensions: ${resultObj.width}×${resultObj.height}`);
-    }
-  }
-
-  return result;
-}
+  | "scan_nodes_by_types"
+  | "set_layout_mode"
+  | "set_padding"
+  | "set_axis_align"
+  | "set_layout_sizing"
+  | "set_item_spacing";
 
 // Update the connectToFigma function
 function connectToFigma(port: number = 3055) {
