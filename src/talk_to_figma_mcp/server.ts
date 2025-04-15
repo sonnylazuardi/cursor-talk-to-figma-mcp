@@ -30,6 +30,34 @@ interface CommandProgressUpdate {
   timestamp: number;
 }
 
+// Add TypeScript interfaces for component overrides after line 21
+interface ComponentOverride {
+  id: string;
+  overriddenFields: string[];
+}
+
+// Update the getInstanceOverridesResult interface to match the plugin implementation
+interface getInstanceOverridesResult {
+  success: boolean;
+  message: string;
+  sourceInstanceId: string;
+  mainComponentId: string;
+  overridesCount: number;
+}
+
+interface setInstanceOverridesResult {
+  success: boolean;
+  message: string;
+  totalCount?: number;
+  results?: Array<{
+    success: boolean;
+    instanceId: string;
+    instanceName: string;
+    appliedCount?: number;
+    message?: string;
+  }>;
+}
+
 // Custom logging functions that write to stderr instead of stdout to avoid being captured
 const logger = {
   info: (message: string) => process.stderr.write(`[INFO] ${message}\n`),
@@ -1209,6 +1237,93 @@ server.tool(
   }
 );
 
+// Copy Instance Overrides Tool
+server.tool(
+  "get_instance_overrides",
+  "Get all override properties from a selected component instance. These overrides can be applied to other instances, which will swap them to match the source component.",
+  {
+    nodeId: z.string().optional().describe("Optional ID of the component instance to get overrides from. If not provided, currently selected instance will be used."),
+  },
+  async ({ nodeId }) => {
+    try {
+      const result = await sendCommandToFigma("get_instance_overrides", { 
+        instanceNodeId: nodeId || null 
+      });
+      const typedResult = result as getInstanceOverridesResult;
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: typedResult.success 
+              ? `Successfully got instance overrides: ${typedResult.message}`
+              : `Failed to get instance overrides: ${typedResult.message}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error copying instance overrides: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Set Instance Overrides Tool
+server.tool(
+  "set_instance_overrides",
+  "Apply previously copied overrides to selected component instances. Target instances will be swapped to the source component and all copied override properties will be applied.",
+  {
+    sourceInstanceId: z.string().describe("ID of the source component instance"),
+    targetNodeIds: z.array(z.string()).describe("Array of target instance IDs. Currently selected instances will be used.")
+  },
+  async ({ sourceInstanceId, targetNodeIds }) => {
+    try {
+      const result = await sendCommandToFigma("set_instance_overrides", {
+        sourceInstanceId: sourceInstanceId,
+        targetNodeIds: targetNodeIds || []
+      });
+      const typedResult = result as setInstanceOverridesResult;
+      
+      if (typedResult.success) {
+        const successCount = typedResult.results?.filter(r => r.success).length || 0;
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Successfully applied ${typedResult.totalCount || 0} overrides to ${successCount} instances.`
+            }
+          ]
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to set instance overrides: ${typedResult.message}`
+            }
+          ]
+        };
+      }
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting instance overrides: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+
 // Set Corner Radius Tool
 server.tool(
   "set_corner_radius",
@@ -1446,10 +1561,10 @@ server.tool(
 // Node Type Scanning Tool
 server.tool(
   "scan_nodes_by_types",
-  "Scan for nodes with specific types in the selected Figma node",
+  "Scan for child nodes with specific types in the selected Figma node",
   {
     nodeId: z.string().describe("ID of the node to scan"),
-    types: z.array(z.string()).describe("Array of node types to find (e.g. ['COMPONENT', 'FRAME'])")
+    types: z.array(z.string()).describe("Array of node types to find in the child nodes (e.g. ['COMPONENT', 'FRAME'])")
   },
   async ({ nodeId, types }) => {
     try {
@@ -1925,6 +2040,62 @@ This strategy focuses on practical implementation based on real-world usage patt
   }
 );
 
+// Instance Slot Filling Strategy Prompt
+server.prompt(
+  "swap_overrides_instances",
+  "Guide to swap instance overrides between instances",
+  (extra) => {
+    return {
+      messages: [
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `# Swap Component Instance and Override Strategy
+
+## Overview
+This strategy enables transferring content and property overrides from a source instance to one or more target instances in Figma, maintaining design consistency while reducing manual work.
+
+## Step-by-Step Process
+
+### 1. Selection Analysis
+- Use \`get_selection()\` to identify the parent component or selected instances
+- For parent components, scan for instances with \`scan_nodes_by_types({ nodeId: "parent-id", types: ["INSTANCE"] })\`
+- Identify custom slots by name patterns (e.g. "Custom Slot*" or "Instance Slot") or by examining text content
+- Determine which is the source instance (with content to copy) and which are targets (where to apply content)
+
+### 2. Extract Source Overrides
+- Use \`get_instance_overrides()\` to extract customizations from the source instance
+- This captures text content, property values, and style overrides
+- Command syntax: \`get_instance_overrides({ nodeId: "source-instance-id" })\`
+- Look for successful response like "Got component information from [instance name]"
+
+### 3. Apply Overrides to Targets
+- Apply captured overrides using \`set_instance_overrides()\`
+- Command syntax:
+  \`\`\`
+  set_instance_overrides({
+    sourceInstanceId: "source-instance-id", 
+    targetNodeIds: ["target-id-1", "target-id-2", ...]
+  })
+  \`\`\`
+
+### 4. Verification
+- Verify results with \`get_node_info()\` or \`read_my_design()\`
+- Confirm text content and style overrides have transferred successfully
+
+## Key Tips
+- Always join the appropriate channel first with \`join_channel()\`
+- When working with multiple targets, check the full selection with \`get_selection()\`
+- Preserve component relationships by using instance overrides rather than direct text manipulation`,
+          },
+        },
+      ],
+      description: "Strategy for transferring overrides between component instances in Figma",
+    };
+  }
+);
+
 // Set Layout Mode Tool
 server.tool(
   "set_layout_mode",
@@ -2181,6 +2352,8 @@ type FigmaCommand =
   | "get_styles"
   | "get_local_components"
   | "create_component_instance"
+  | "get_instance_overrides"
+  | "set_instance_overrides"
   | "export_node_as_image"
   | "join"
   | "set_corner_radius"
@@ -2197,6 +2370,167 @@ type FigmaCommand =
   | "set_axis_align"
   | "set_layout_sizing"
   | "set_item_spacing";
+
+
+type CommandParams = {
+  get_document_info: Record<string, never>;
+  get_selection: Record<string, never>;
+  get_node_info: { nodeId: string };
+  get_nodes_info: { nodeIds: string[] };
+  create_rectangle: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    name?: string;
+    parentId?: string;
+  };
+  create_frame: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    name?: string;
+    parentId?: string;
+    fillColor?: { r: number; g: number; b: number; a?: number };
+    strokeColor?: { r: number; g: number; b: number; a?: number };
+    strokeWeight?: number;
+  };
+  create_text: {
+    x: number;
+    y: number;
+    text: string;
+    fontSize?: number;
+    fontWeight?: number;
+    fontColor?: { r: number; g: number; b: number; a?: number };
+    name?: string;
+    parentId?: string;
+  };
+  set_fill_color: {
+    nodeId: string;
+    r: number;
+    g: number;
+    b: number;
+    a?: number;
+  };
+  set_stroke_color: {
+    nodeId: string;
+    r: number;
+    g: number;
+    b: number;
+    a?: number;
+    weight?: number;
+  };
+  move_node: {
+    nodeId: string;
+    x: number;
+    y: number;
+  };
+  resize_node: {
+    nodeId: string;
+    width: number;
+    height: number;
+  };
+  delete_node: {
+    nodeId: string;
+  };
+  delete_multiple_nodes: {
+    nodeIds: string[];
+  };
+  get_styles: Record<string, never>;
+  get_local_components: Record<string, never>;
+  get_team_components: Record<string, never>;
+  create_component_instance: {
+    componentKey: string;
+    x: number;
+    y: number;
+  };
+  get_instance_overrides: {
+    instanceNodeId: string | null;
+  };
+  set_instance_overrides: {
+    targetNodeIds: string[];
+    sourceInstanceId: string;
+  };
+  export_node_as_image: {
+    nodeId: string;
+    format?: "PNG" | "JPG" | "SVG" | "PDF";
+    scale?: number;
+  };
+  execute_code: {
+    code: string;
+  };
+  join: {
+    channel: string;
+  };
+  set_corner_radius: {
+    nodeId: string;
+    radius: number;
+    corners?: boolean[];
+  };
+  clone_node: {
+    nodeId: string;
+    x?: number;
+    y?: number;
+  };
+  set_text_content: {
+    nodeId: string;
+    text: string;
+  };
+  scan_text_nodes: {
+    nodeId: string;
+    useChunking: boolean;
+    chunkSize: number;
+  };
+  set_multiple_text_contents: {
+    nodeId: string;
+    text: Array<{ nodeId: string; text: string }>;
+  };
+  get_annotations: {
+    nodeId?: string;
+    includeCategories?: boolean;
+  };
+  set_annotation: {
+    nodeId: string;
+    annotationId?: string;
+    labelMarkdown: string;
+    categoryId?: string;
+    properties?: Array<{ type: string }>;
+  };
+  set_multiple_annotations: SetMultipleAnnotationsParams;
+  scan_nodes_by_types: {
+    nodeId: string;
+    types: Array<string>;
+  };
+};
+
+
+  // Helper function to process Figma node responses
+function processFigmaNodeResponse(result: unknown): any {
+  if (!result || typeof result !== "object") {
+    return result;
+  }
+
+  // Check if this looks like a node response
+  const resultObj = result as Record<string, unknown>;
+  if ("id" in resultObj && typeof resultObj.id === "string") {
+    // It appears to be a node response, log the details
+    console.info(
+      `Processed Figma node: ${resultObj.name || "Unknown"} (ID: ${resultObj.id
+      })`
+    );
+
+    if ("x" in resultObj && "y" in resultObj) {
+      console.debug(`Node position: (${resultObj.x}, ${resultObj.y})`);
+    }
+
+    if ("width" in resultObj && "height" in resultObj) {
+      console.debug(`Node dimensions: ${resultObj.width}×${resultObj.height}`);
+    }
+  }
+
+  return result;
+}
 
 // Update the connectToFigma function
 function connectToFigma(port: number = 3055) {
@@ -2468,4 +2802,6 @@ main().catch(error => {
   logger.error(`Error starting FigmaMCP server: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
+
 
