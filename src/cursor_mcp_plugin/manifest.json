@@ -1,22 +1,14 @@
 {
-  "name": "Cursor MCP Plugin",
-  "id": "cursor-mcp-plugin",
+  "name": "DesignForge MCP",
+  "id": "design-forge-mcp",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": [
-    "figma",
-    "figjam"
-  ],
+  "editorType": ["figma", "figjam"],
   "permissions": [],
   "networkAccess": {
-    "allowedDomains": [
-      "https://google.com"
-    ],
-    "devAllowedDomains": [
-      "http://localhost:3055",
-      "ws://localhost:3055"
-    ]
+    "allowedDomains": ["https://google.com"],
+    "devAllowedDomains": ["http://localhost:3055", "ws://localhost:3055"]
   },
   "documentAccess": "dynamic-page",
   "enableProposedApi": true,

@@ -57,6 +57,92 @@
         color: #666666;
         cursor: not-allowed;
       }
+
+            /* Log panel styles */
+            .log-panel {
+        background-color: #252525;
+        border: 1px solid #444;
+        border-radius: 4px;
+        margin: 10px 0;
+        height: 200px;
+        overflow-y: auto;
+        padding: 5px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      
+      .log-entry {
+        padding: 4px;
+        border-bottom: 1px solid #333;
+        word-wrap: break-word;
+      }
+      
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+      
+      .log-entry .timestamp {
+        color: #999;
+        font-size: 10px;
+      }
+      
+      .log-entry.incoming {
+        color: #4ade80;
+      }
+      
+      .log-entry.outgoing {
+        color: #66b3ff;
+      }
+      
+      .log-controls {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 10px;
+      }
+      
+      .log-direction {
+        display: inline-block;
+        padding: 2px 4px;
+        border-radius: 3px;
+        margin-right: 6px;
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      
+      .log-direction.incoming {
+        background-color: #1a472a;
+        color: #4ade80;
+      }
+      
+      .log-direction.outgoing {
+        background-color: #1a3147;
+        color: #66b3ff;
+      }
+      
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #444444;
+        margin-bottom: 16px;
+      }
+      .tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #999999;
+      }
+      .tab.active {
+        border-bottom: 2px solid #18a0fb;
+        color: #18a0fb;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
       input {
         border: 1px solid #444444;
         border-radius: 4px;
@@ -179,13 +265,14 @@
           />
         </div>
         <div class="header-text">
-          <h1>Cursor Talk To Figma Plugin</h1>
-          <p>Connect Figma to Cursor AI using MCP</p>
+          <h1>DesignForge</h1>
+          <p>LLM control over Figma using MCP</p>
         </div>
       </div>
 
       <div class="tabs">
         <div id="tab-connection" class="tab active">Connection</div>
+        <div id="tab-logs" class="tab">Logs</div>
         <div id="tab-about" class="tab">About</div>
       </div>
 
@@ -210,6 +297,16 @@
         </div>
 
         <div class="section">
+          <h2>Communication Logs</h2>
+          <div class="log-controls">
+            <button id="btn-clear-logs" class="secondary">Clear Logs</button>
+          </div>
+          <div id="log-panel" class="log-panel">
+            <!-- Log entries will be added here dynamically -->
+          </div>
+        </div>
+
+        <div class="section">
           <button id="btn-disconnect" class="secondary" disabled>
             Disconnect
           </button>
@@ -227,6 +324,8 @@
             <div id="progress-percentage">0%</div>
           </div>
         </div>
+
+
       </div>
 
       <div id="content-about" class="tab-content">
@@ -261,6 +360,8 @@
         serverPort: 3055,
         pendingRequests: new Map(),
         channel: null,
+        logs: [],
+        maxLogs: 500, // Maximum number of logs to keep
       };
 
       // UI Elements
@@ -268,6 +369,8 @@
       const connectButton = document.getElementById("btn-connect");
       const disconnectButton = document.getElementById("btn-disconnect");
       const connectionStatus = document.getElementById("connection-status");
+      const logPanel = document.getElementById("log-panel");
+      const btnClearLogs = document.getElementById("btn-clear-logs");
 
       // Tabs
       const tabs = document.querySelectorAll(".tab");
@@ -391,6 +494,113 @@
           updateConnectionStatus(false, "Disconnected from server");
         }
       }
+
+      // Function to add a log entry
+      function addLogEntry(entry) {
+        // Add to logs array but keep size limited
+        state.logs.push(entry);
+        if (state.logs.length > state.maxLogs) {
+          state.logs.shift(); // Remove oldest log
+        }
+        
+        // Format timestamp
+        const date = new Date(entry.timestamp);
+        const timeString = date.toLocaleTimeString();
+        
+        // Create log element
+        const logElement = document.createElement("div");
+        logElement.className = `log-entry ${entry.direction}`;
+        
+        // Create direction indicator
+        const directionSpan = document.createElement("span");
+        directionSpan.className = `log-direction ${entry.direction}`;
+        directionSpan.textContent = entry.direction.substring(0, 3).toUpperCase();
+        
+        // Create timestamp span
+        const timeSpan = document.createElement("span");
+        timeSpan.className = "timestamp";
+        timeSpan.textContent = timeString;
+        
+        // Create content span
+        const contentSpan = document.createElement("div");
+        contentSpan.innerHTML = `<strong>${entry.type}</strong>: ${formatLogData(entry.data)}`;
+        
+        // Assemble log entry
+        logElement.appendChild(directionSpan);
+        logElement.appendChild(document.createTextNode(" "));
+        logElement.appendChild(timeSpan);
+        logElement.appendChild(document.createTextNode(" - "));
+        logElement.appendChild(contentSpan);
+        
+        // Add to both log panels
+        logPanel.appendChild(logElement.cloneNode(true));
+        
+        // Scroll to bottom for both panels
+        logPanel.scrollTop = logPanel.scrollHeight;
+      }
+
+      // Format log data nicely
+      function formatLogData(data) {
+        if (data === undefined || data === null) {
+          return "null";
+        }
+        
+        if (typeof data === "object") {
+          // Keep it simple by limiting depth for readability
+          try {
+            const simplified = simplifyObject(data, 2);
+            return JSON.stringify(simplified, null, 2)
+              .replace(/\n/g, "<br>")
+              .replace(/ /g, "&nbsp;");
+          } catch (e) {
+            return String(data);
+          }
+        }
+        
+        return String(data);
+      }
+
+      // Simplify objects for display by limiting depth
+      function simplifyObject(obj, maxDepth = 2, currentDepth = 0) {
+        if (currentDepth >= maxDepth) {
+          if (Array.isArray(obj)) {
+            return `[Array(${obj.length})]`;
+          }
+          if (typeof obj === 'object' && obj !== null) {
+            return `{Object with ${Object.keys(obj).length} properties}`;
+          }
+          return obj;
+        }
+        
+        if (Array.isArray(obj)) {
+          return obj.map(item => simplifyObject(item, maxDepth, currentDepth + 1));
+        }
+        
+        if (typeof obj === 'object' && obj !== null) {
+          const result = {};
+          for (const [key, value] of Object.entries(obj)) {
+            result[key] = simplifyObject(value, maxDepth, currentDepth + 1);
+          }
+          return result;
+        }
+        
+        return obj;
+      }
+
+      // Clear logs
+      function clearLogs() {
+        state.logs = [];
+        logPanel.innerHTML = '';
+        
+        // Notify plugin
+        parent.postMessage({
+          pluginMessage: {
+            type: "clear-logs"
+          }
+        }, "*");
+      }
+
+      btnClearLogs.addEventListener("click", clearLogs);
 
       // Handle messages from the WebSocket
       async function handleSocketMessage(payload) {
@@ -649,6 +859,29 @@
             sendProgressUpdateToServer(message);
             break;
         }
+      };
+
+            // Log socket messages
+      const originalSend = WebSocket.prototype.send;
+      WebSocket.prototype.send = function(data) {
+        try {
+          const parsedData = JSON.parse(data);
+          addLogEntry({
+            timestamp: new Date().toISOString(),
+            direction: "outgoing",
+            type: "websocket",
+            data: parsedData
+          });
+        } catch (e) {
+          // If data isn't JSON, just log it as a string
+          addLogEntry({
+            timestamp: new Date().toISOString(),
+            direction: "outgoing",
+            type: "websocket",
+            data: data
+          });
+        }
+        originalSend.apply(this, arguments);
       };
     </script>
   </body>
