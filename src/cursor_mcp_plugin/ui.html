@@ -351,7 +351,6 @@
         </div>
       </div>
     </div>
-
     <script>
       // WebSocket connection state
       const state = {
@@ -359,11 +358,10 @@
         socket: null,
         serverPort: 3055,
         pendingRequests: new Map(),
-        channel: null,
         logs: [],
         maxLogs: 500, // Maximum number of logs to keep
       };
-
+    
       // UI Elements
       const portInput = document.getElementById("port");
       const connectButton = document.getElementById("btn-connect");
@@ -371,18 +369,18 @@
       const connectionStatus = document.getElementById("connection-status");
       const logPanel = document.getElementById("log-panel");
       const btnClearLogs = document.getElementById("btn-clear-logs");
-
+    
       // Tabs
       const tabs = document.querySelectorAll(".tab");
       const tabContents = document.querySelectorAll(".tab-content");
-
+    
       // Add UI elements for progress tracking
       const progressContainer = document.getElementById("progress-container");
       const progressBar = document.getElementById("progress-bar");
       const progressMessage = document.getElementById("progress-message");
       const progressStatus = document.getElementById("progress-status");
       const progressPercentage = document.getElementById("progress-percentage");
-
+    
       // Initialize UI
       function updateConnectionStatus(isConnected, message) {
         state.connected = isConnected;
@@ -394,12 +392,12 @@
         connectionStatus.className = `status ${
           isConnected ? "connected" : "disconnected"
         }`;
-
+    
         connectButton.disabled = isConnected;
         disconnectButton.disabled = !isConnected;
         portInput.disabled = isConnected;
       }
-
+    
       // Connect to WebSocket server
       async function connectToServer(port) {
         try {
@@ -407,46 +405,40 @@
             updateConnectionStatus(true, "Already connected to server");
             return;
           }
-
+    
           state.serverPort = port;
           state.socket = new WebSocket(`ws://localhost:${port}`);
-
+    
           state.socket.onopen = () => {
-            // Generate random channel name
-            const channelName = generateChannelName();
-            console.log("Joining channel:", channelName);
-            state.channel = channelName;
-
-            // Join the channel using the same format as App.tsx
+            // Send join message to the server
             state.socket.send(
               JSON.stringify({
                 type: "join",
-                channel: channelName.trim(),
+                id: generateId()
               })
             );
           };
-
+    
           state.socket.onmessage = (event) => {
             try {
               const data = JSON.parse(event.data);
               console.log("Received message:", data);
-
+    
               if (data.type === "system") {
-                // Successfully joined channel
+                // Successfully connected to the server
                 if (data.message && data.message.result) {
                   state.connected = true;
-                  const channelName = data.channel;
                   updateConnectionStatus(
                     true,
-                    `Connected to server on port ${port} in channel: <strong>${channelName}</strong>`
+                    `Connected to server on port ${port}`
                   );
-
+    
                   // Notify the plugin code
                   parent.postMessage(
                     {
                       pluginMessage: {
                         type: "notify",
-                        message: `Connected to Cursor MCP server on port ${port} in channel: ${channelName}`,
+                        message: `Connected to Cursor MCP server on port ${port}`,
                       },
                     },
                     "*"
@@ -457,19 +449,19 @@
                 updateConnectionStatus(false, `Error: ${data.message}`);
                 state.socket.close();
               }
-
+    
               handleSocketMessage(data);
             } catch (error) {
               console.error("Error parsing message:", error);
             }
           };
-
+    
           state.socket.onclose = () => {
             state.connected = false;
             state.socket = null;
             updateConnectionStatus(false, "Disconnected from server");
           };
-
+    
           state.socket.onerror = (error) => {
             console.error("WebSocket error:", error);
             updateConnectionStatus(false, "Connection error");
@@ -484,7 +476,7 @@
           );
         }
       }
-
+    
       // Disconnect from websocket server
       function disconnectFromServer() {
         if (state.socket) {
@@ -494,7 +486,7 @@
           updateConnectionStatus(false, "Disconnected from server");
         }
       }
-
+    
       // Function to add a log entry
       function addLogEntry(entry) {
         // Add to logs array but keep size limited
@@ -538,7 +530,7 @@
         // Scroll to bottom for both panels
         logPanel.scrollTop = logPanel.scrollHeight;
       }
-
+    
       // Format log data nicely
       function formatLogData(data) {
         if (data === undefined || data === null) {
@@ -559,7 +551,7 @@
         
         return String(data);
       }
-
+    
       // Simplify objects for display by limiting depth
       function simplifyObject(obj, maxDepth = 2, currentDepth = 0) {
         if (currentDepth >= maxDepth) {
@@ -586,7 +578,7 @@
         
         return obj;
       }
-
+    
       // Clear logs
       function clearLogs() {
         state.logs = [];
@@ -599,19 +591,19 @@
           }
         }, "*");
       }
-
+    
       btnClearLogs.addEventListener("click", clearLogs);
-
+    
       // Handle messages from the WebSocket
       async function handleSocketMessage(payload) {
         const data = payload.message;
         console.log("handleSocketMessage", data);
-
+    
         // If it's a response to a previous request
-        if (data.id && state.pendingRequests.has(data.id)) {
+        if (data && data.id && state.pendingRequests.has(data.id)) {
           const { resolve, reject } = state.pendingRequests.get(data.id);
           state.pendingRequests.delete(data.id);
-
+    
           if (data.error) {
             reject(new Error(data.error));
           } else {
@@ -619,9 +611,9 @@
           }
           return;
         }
-
+    
         // If it's a new command
-        if (data.command) {
+        if (data && data.command) {
           try {
             // Send the command to the plugin code
             parent.postMessage(
@@ -644,7 +636,7 @@
           }
         }
       }
-
+    
       // Send a command to the WebSocket server
       async function sendCommand(command, params) {
         return new Promise((resolve, reject) => {
@@ -652,15 +644,14 @@
             reject(new Error("Not connected to server"));
             return;
           }
-
+    
           const id = generateId();
           state.pendingRequests.set(id, { resolve, reject });
-
+    
           state.socket.send(
             JSON.stringify({
               id,
               type: "message",
-              channel: state.channel,
               message: {
                 id,
                 command,
@@ -668,7 +659,7 @@
               },
             })
           );
-
+    
           // Set timeout to reject the promise after 30 seconds
           setTimeout(() => {
             if (state.pendingRequests.has(id)) {
@@ -678,19 +669,18 @@
           }, 30000);
         });
       }
-
+    
       // Send success response back to WebSocket
       function sendSuccessResponse(id, result) {
         if (!state.connected || !state.socket) {
           console.error("Cannot send response: socket not connected");
           return;
         }
-
+    
         state.socket.send(
           JSON.stringify({
             id,
             type: "message",
-            channel: state.channel,
             message: {
               id,
               result,
@@ -698,53 +688,42 @@
           })
         );
       }
-
+    
       // Send error response back to WebSocket
       function sendErrorResponse(id, errorMessage) {
         if (!state.connected || !state.socket) {
           console.error("Cannot send error response: socket not connected");
           return;
         }
-
+    
         state.socket.send(
           JSON.stringify({
             id,
+            type: "message",
             error: errorMessage,
           })
         );
       }
-
+    
       // Helper to generate unique IDs
       function generateId() {
         return (
           Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
         );
       }
-
-      // Add this function after the generateId() function
-      function generateChannelName() {
-        const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let result = "";
-        for (let i = 0; i < 8; i++) {
-          result += characters.charAt(
-            Math.floor(Math.random() * characters.length)
-          );
-        }
-        return result;
-      }
-
+    
       // Tab switching
       tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
           tabs.forEach((t) => t.classList.remove("active"));
           tabContents.forEach((c) => c.classList.remove("active"));
-
+    
           tab.classList.add("active");
           const contentId = "content-" + tab.id.split("-")[1];
           document.getElementById(contentId).classList.add("active");
         });
       });
-
+    
       // Connect to server
       connectButton.addEventListener("click", () => {
         const port = parseInt(portInput.value, 10) || 3055;
@@ -752,14 +731,14 @@
         connectionStatus.className = "status info";
         connectToServer(port);
       });
-
+    
       // Disconnect from server
       disconnectButton.addEventListener("click", () => {
         updateConnectionStatus(false, "Disconnecting...");
         connectionStatus.className = "status info";
         disconnectFromServer();
       });
-
+    
       // Function to update progress UI
       function updateProgressUI(progressData) {
         // Show progress container if hidden
@@ -793,7 +772,7 @@
           progressStatus.className = "operation-error";
         }
       }
-
+    
       // Send operation progress update to server
       function sendProgressUpdateToServer(progressData) {
         if (!state.connected || !state.socket) {
@@ -807,7 +786,6 @@
           JSON.stringify({
             id: progressData.commandId,
             type: "progress_update",
-            channel: state.channel,
             message: {
               id: progressData.commandId,
               type: "progress_update",
@@ -826,14 +804,14 @@
         progressStatus.className = "";
         progressPercentage.textContent = "0%";
       }
-
+    
       // Listen for messages from the plugin code
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (!message) return;
-
+    
         console.log("Received message from plugin:", message);
-
+    
         switch (message.type) {
           case "connection-status":
             updateConnectionStatus(message.connected, message.message);
@@ -860,8 +838,8 @@
             break;
         }
       };
-
-            // Log socket messages
+    
+      // Log socket messages
       const originalSend = WebSocket.prototype.send;
       WebSocket.prototype.send = function(data) {
         try {
