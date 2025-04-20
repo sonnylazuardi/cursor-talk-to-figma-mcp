@@ -32,11 +32,33 @@ bun socket
 
 4. MCP server
 
-```bash
-bunx cursor-talk-to-figma-mcp
+talk-to-figma MCP server 코드를 수정 중이어서 bunx 패키지 로드 아닌 다음과 같은 실행이 필요합니다.
+
+- `src/talk_to_figma_mcp` 로 cli 진입
+- `npm run build` 실행: 타입 스크립트 컴파일러(tsc) 사용한 js 서버 빌드
+- MCP client 설정 json에서 `/src/talk_to_figma_mcp/dist/server.js`로 경로 지정
+
+e.g., Claude MacOS client
+
+```json
+{
+  "mcpServers": {
+    "figma": {
+      "command": "node",
+      "args": [
+        "${destination_to_folder}/samsung-cxi-mcp-server/src/talk_to_figma_mcp/dist/server.js"
+      ]
+    }
+  }
+}
+
 ```
 
-5. Install [Figma Plugin](#figma-plugin)
+~~```bash~~
+~~bunx cursor-talk-to-figma-mcp~~
+~~```~~
+
+1. Install [Figma Plugin](#figma-plugin)
 
 ## Quick Video Tutorial
 
