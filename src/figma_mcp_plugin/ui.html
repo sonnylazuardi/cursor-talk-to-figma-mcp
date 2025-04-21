@@ -611,6 +611,31 @@
           })
         );
       }
+
+      /**
+       * Converts a Uint8Array to a Base64 data URL for a PNG.
+       * @param {Uint8Array} u8Arr
+       * @returns {string} Data URL like "data:image/png;base64,……"
+       */
+      function uint8ToPngDataUrlSync(u8Arr) {
+        const CHUNK_SIZE = 0x8000; // 32KB per chunk
+        let index = 0;
+        const length = u8Arr.length;
+        let binary = '';
+
+        while (index < length) {
+          const slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+          // convert each chunk to string
+          binary += String.fromCharCode.apply(null, slice);
+          index += CHUNK_SIZE;
+        }
+
+        // Base64-encode the binary string
+        const base64 = window.btoa(binary);
+        return base64;
+        // return 'data:image/png;base64,' + base64;
+      }
+
     
       // Listen for messages from the plugin code
       window.onmessage = (event) => {
@@ -630,6 +655,8 @@
             disconnectButton.click();
             break;
           case "command-result":
+          const resultImageDataUrl = uint8ToPngDataUrlSync(message.pageBytes);
+          message.result.pageImageDataUrl = resultImageDataUrl;
             sendSuccessResponse(message.id, message.result);
             break;
           case "command-error":
@@ -646,12 +673,11 @@
       const originalSend = WebSocket.prototype.send;
       WebSocket.prototype.send = function(data) {
         try {
-          const parsedData = JSON.parse(data);
           addLogEntry({
             timestamp: new Date().toISOString(),
             direction: "outgoing",
             type: "websocket",
-            data: parsedData
+            data: data
           });
         } catch (e) {
           addLogEntry({
