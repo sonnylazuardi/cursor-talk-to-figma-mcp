@@ -2,134 +2,93 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Cursor MCP Plugin</title>
+    <title>DesignForge Plugin</title>
     <style>
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
+        font-family: system-ui, -apple-system, sans-serif;
         margin: 0;
-        padding: 20px;
+        padding: 12px;
         color: #e0e0e0;
         background-color: #1e1e1e;
       }
       .container {
         display: flex;
         flex-direction: column;
-        height: 100%;
       }
-      h1 {
-        font-size: 16px;
+      h1, h2 {
         font-weight: 600;
-        margin-bottom: 10px;
         color: #ffffff;
-      }
-      h2 {
-        font-size: 14px;
-        font-weight: 600;
-        margin-top: 20px;
         margin-bottom: 8px;
-        color: #ffffff;
       }
+      h1 { font-size: 16px; }
+      h2 { font-size: 14px; margin-top: 16px; }
       button {
         background-color: #18a0fb;
         border: none;
         color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        margin-top: 8px;
-        margin-bottom: 8px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        margin-top: 6px;
         cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.2s;
-      }
-      button:hover {
-        background-color: #0d8ee0;
+        font-size: 13px;
       }
       button.secondary {
         background-color: #3d3d3d;
         color: #e0e0e0;
-      }
-      button.secondary:hover {
-        background-color: #4d4d4d;
       }
       button:disabled {
         background-color: #333333;
         color: #666666;
         cursor: not-allowed;
       }
-
-            /* Log panel styles */
-            .log-panel {
+      .log-panel {
         background-color: #252525;
         border: 1px solid #444;
-        border-radius: 4px;
-        margin: 10px 0;
-        height: 200px;
+        border-radius: 2px;
+        margin: 8px 0;
+        height: 180px;
         overflow-y: auto;
-        padding: 5px;
-        font-family: monospace;
-        font-size: 12px;
-      }
-      
-      .log-entry {
         padding: 4px;
+        font-family: monospace;
+        font-size: 11px;
+      }
+      .log-entry {
+        padding: 3px;
         border-bottom: 1px solid #333;
         word-wrap: break-word;
       }
-      
-      .log-entry:last-child {
-        border-bottom: none;
-      }
-      
       .log-entry .timestamp {
         color: #999;
-        font-size: 10px;
+        font-size: 9px;
       }
-      
-      .log-entry.incoming {
-        color: #4ade80;
-      }
-      
-      .log-entry.outgoing {
-        color: #66b3ff;
-      }
-      
-      .log-controls {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 10px;
-      }
-      
+      .log-entry.incoming { color: #4ade80; }
+      .log-entry.outgoing { color: #66b3ff; }
       .log-direction {
         display: inline-block;
-        padding: 2px 4px;
-        border-radius: 3px;
-        margin-right: 6px;
-        font-size: 10px;
+        padding: 1px 3px;
+        border-radius: 2px;
+        margin-right: 4px;
+        font-size: 9px;
         text-transform: uppercase;
         font-weight: bold;
       }
-      
       .log-direction.incoming {
         background-color: #1a472a;
         color: #4ade80;
       }
-      
       .log-direction.outgoing {
         background-color: #1a3147;
         color: #66b3ff;
       }
-      
       .tabs {
         display: flex;
         border-bottom: 1px solid #444444;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
       .tab {
-        padding: 8px 16px;
+        padding: 6px 12px;
         cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
+        font-size: 13px;
         color: #999999;
       }
       .tab.active {
@@ -142,143 +101,56 @@
       .tab-content.active {
         display: block;
       }
-
       input {
         border: 1px solid #444444;
         border-radius: 4px;
-        padding: 8px;
-        margin-bottom: 12px;
-        font-size: 14px;
-        width: 100%;
-        box-sizing: border-box;
+        padding: 6px;
+        font-size: 13px;
         background-color: #2d2d2d;
         color: #e0e0e0;
       }
       label {
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
         font-size: 12px;
-        font-weight: 500;
         color: #cccccc;
       }
       .status {
-        margin-top: 16px;
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 14px;
+        margin-top: 12px;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 13px;
       }
-      .status.connected {
-        background-color: #1a472a;
-        color: #4ade80;
-      }
-      .status.disconnected {
-        background-color: #471a1a;
-        color: #ff9999;
-      }
-      .status.info {
-        background-color: #1a3147;
-        color: #66b3ff;
-      }
-      .section {
-        margin-bottom: 24px;
-      }
-      .hidden {
-        display: none;
-      }
-      .logo {
-        width: 50px;
-        height: 50px;
-      }
+      .status.connected { background-color: #1a472a; color: #4ade80; }
+      .status.disconnected { background-color: #471a1a; color: #ff9999; }
+      .status.info { background-color: #1a3147; color: #66b3ff; }
+      .section { margin-bottom: 16px; }
+      .hidden { display: none; }
       .header {
         display: flex;
         align-items: center;
-        margin-bottom: 16px;
-      }
-      .header-text {
-        margin-left: 12px;
-      }
-      .header-text h1 {
-        margin: 0;
-        font-size: 16px;
-      }
-      .header-text p {
-        margin: 4px 0 0 0;
+        font-family: Georgia, "Times New Roman", serif;
         font-size: 12px;
-        color: #999999;
+        color: #aaaaaa;
+        font-style: italic;
+        margin-bottom: 8px;
       }
-      .tabs {
-        display: flex;
-        border-bottom: 1px solid #444444;
-        margin-bottom: 16px;
-      }
-      .tab {
-        padding: 8px 16px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        color: #999999;
-      }
-      .tab.active {
-        border-bottom: 2px solid #18a0fb;
-        color: #18a0fb;
-      }
-      .tab-content {
-        display: none;
-      }
-      .tab-content.active {
-        display: block;
-      }
-      .link {
-        color: #18a0fb;
-        text-decoration: none;
-        cursor: pointer;
-      }
-      .link:hover {
-        text-decoration: underline;
-      }
-      .header-logo {
-        padding: 16px;
-        border-radius: 16px;
-        background-color: #333;
-      }
-      .header-logo-image {
-        width: 24px;
-        height: 24px;
-        object-fit: contain;
-      }
-      /* Progress styles */
-      .operation-complete {
-        color: #4ade80;
-      }
-      .operation-error {
-        color: #ff9999;
-      }
+      .operation-complete { color: #4ade80; }
+      .operation-error { color: #ff9999; }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <div class="header-logo">
-          <img
-            class="header-logo-image"
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAMAAAANIilAAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAJcEhZcwAAEJwAABCcASbNOjQAAAB1UExURUdwTP////////////////39/f////////////////////////////7+/v////////////39/f////////////////////////////////////////////////////39/fn5+ejo6P///+rq6uXl5f////Ly8gf4a04AAAAkdFJOUwAOdkZCfz04zIgbT0pkIagnm7C9b6C2LWqSxBMyB11W2Ovsy3D12ZYAAALtSURBVEjHndcJt6ogEADgXNAUcWlxSQVN3/3/P/EBAgJpWdM9p5ue78xANE2n05vIUduffgvn1oA0bX+hvRc1DYjTPHe+tiGIoqhx4zTNq/y72lMURQtmqasuPc4dAmgwfWuZrqquiw8uNnC5BRJT3YXhIZ7Xris0oLjlmOrArz7VHpOb6wpNee0ITVMHvvd25/qgvtFwla8dpxV7xnTi7dbed7iuTY16lZoV7iXQb3cqRgjVgoviKTZSUw2719pbD2OEVu5yjnqeOpZ75lMMobVzfUcwC6lrofGJpdb3jGtj6TkkNKRWtXMsU+ciNdfQUwe+zZ7/vo1CYYgv39G/kShMS6mHL+g8F96K2Uqi52E6j3DFnsc4uR/hMwugYd9bOLoeSTvPE1yx4/sLh9B9fKbziHVM3z/G+dKb5wdKdysxsNCc4+2l/yk7EnrOVhwGBt9auqJ0t9gR13C4cl77bdil88SPuK9jxrXksHjab48Mwo+4ha3aSbZJ52JpC4GFbY7OdsVst4Lls/mKZe1y6fXTonS3RFsIN7C5dAJsO+WiI21jbd8xesFEtoUdLLjH+qGNJ9WRuj3MOOQNycaV6khvsLc0MxsD2Uq7bhcHuBZh4rFdujjT1c6GkaXtszCx3sW3MRRfNjwiI7EjGjGfFjZwUgM9CuNggqRVXz+vOGDTBOCP5UnHE73ghjK1jYNlEIma9UnHBb/qdkvq1MSQjk4yCvGk4UneQylLbWAIio3I1t26q4sNTuM01tqQe9+My5pYv9wk8Ypv92w7JpXYulGoD8aJ3C/bUUp8tW5EuTa2oXI7ZGLzahZYE0l03QqZWI8Lfh1lw+zxEoNIrF8Dm/NQT8rzgz+WP/oQmL6Ud4pud/4DZzMWPKjXZfJufOyiVzzKV4/609yelDaWiZsDc6+DSwOLxNqxeD/6Ah3zf674+Kyf3xUeDi3WDFIKzCpOv/5phB4MD+cs/OWXVdych/GBf/xJd4pL9+1i/wOElMO5v/co4wAAAABJRU5ErkJggg=="
-          />
-        </div>
-        <div class="header-text">
-          <h1>DesignForge</h1>
-          <p>LLM control over Figma using MCP</p>
-        </div>
+        A machine tracing dreams
       </div>
-
       <div class="tabs">
         <div id="tab-connection" class="tab active">Connection</div>
-        <div id="tab-logs" class="tab">Logs</div>
-        <div id="tab-about" class="tab">About</div>
       </div>
 
       <div id="content-connection" class="tab-content active">
         <div class="section">
-          <label for="port">WebSocket Server Port</label>
+          <label for="port">WebSocket Port</label>
           <div style="display: flex; gap: 8px">
             <input
               type="number"
@@ -288,66 +160,44 @@
               min="1024"
               max="65535"
             />
-            <button id="btn-connect" class="primary">Connect</button>
+            <button id="btn-connect">Connect</button>
+            <button id="btn-disconnect" class="secondary" disabled>
+              Disconnect
+            </button>
           </div>
-        </div>
-
-        <div id="connection-status" class="status disconnected">
-          Not connected to Cursor MCP server
-        </div>
-
-        <div class="section">
-          <h2>Communication Logs</h2>
-          <div class="log-controls">
-            <button id="btn-clear-logs" class="secondary">Clear Logs</button>
-          </div>
-          <div id="log-panel" class="log-panel">
-            <!-- Log entries will be added here dynamically -->
-          </div>
-        </div>
-
-        <div class="section">
-          <button id="btn-disconnect" class="secondary" disabled>
-            Disconnect
-          </button>
         </div>
         
-        <!-- Add Progress Bar Section -->
+        <div id="connection-status" class="status disconnected">
+          Not connected to server
+        </div>
+
+        <div class="section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
+            <h2>Logs</h2>
+            <button id="btn-clear-logs" class="secondary">Clear</button>
+          </div>
+          <div id="log-panel" class="log-panel"></div>
+        </div>
         <div id="progress-container" class="section hidden">
           <h2>Operation Progress</h2>
           <div id="progress-message">No operation in progress</div>
           <div style="width: 100%; background-color: #444; border-radius: 4px; margin-top: 8px;">
-            <div id="progress-bar" style="width: 0%; height: 8px; background-color: #18a0fb; border-radius: 4px; transition: width 0.3s;"></div>
+            <div id="progress-bar" style="width: 0%; height: 6px; background-color: #18a0fb; border-radius: 4px; transition: width 0.3s;"></div>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px;">
             <div id="progress-status">Not started</div>
             <div id="progress-percentage">0%</div>
           </div>
         </div>
-
-
       </div>
 
-      <div id="content-about" class="tab-content">
+      <div id="content-logs" class="tab-content">
         <div class="section">
-          <h2>About Cursor Talk To Figma Plugin</h2>
-          <p>
-            This plugin allows Cursor AI to communicate with Figma, enabling
-            AI-assisted design operations. created by
-            <a
-              class="link"
-              onclick="window.open(`https://github.com/sonnylazuardi`, '_blank')"
-              >Sonny</a
-            >
-          </p>
-          <p>Version: 1.0.0</p>
-
-          <h2>How to Use</h2>
-          <ol>
-            <li>Make sure the MCP server is running in Cursor</li>
-            <li>Connect to the server using the port number (default: 3055)</li>
-            <li>Once connected, you can interact with Figma through Cursor</li>
-          </ol>
+          <h2>Communication Logs</h2>
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 6px">
+            <button id="btn-clear-logs-tab" class="secondary">Clear Logs</button>
+          </div>
+          <div id="log-panel-tab" class="log-panel"></div>
         </div>
       </div>
     </div>
@@ -359,7 +209,7 @@
         serverPort: 3055,
         pendingRequests: new Map(),
         logs: [],
-        maxLogs: 500, // Maximum number of logs to keep
+        maxLogs: 500,
       };
     
       // UI Elements
@@ -368,13 +218,15 @@
       const disconnectButton = document.getElementById("btn-disconnect");
       const connectionStatus = document.getElementById("connection-status");
       const logPanel = document.getElementById("log-panel");
+      const logPanelTab = document.getElementById("log-panel-tab");
       const btnClearLogs = document.getElementById("btn-clear-logs");
+      const btnClearLogsTab = document.getElementById("btn-clear-logs-tab");
     
       // Tabs
       const tabs = document.querySelectorAll(".tab");
       const tabContents = document.querySelectorAll(".tab-content");
     
-      // Add UI elements for progress tracking
+      // Progress tracking elements
       const progressContainer = document.getElementById("progress-container");
       const progressBar = document.getElementById("progress-bar");
       const progressMessage = document.getElementById("progress-message");
@@ -385,13 +237,8 @@
       function updateConnectionStatus(isConnected, message) {
         state.connected = isConnected;
         connectionStatus.innerHTML =
-          message ||
-          (isConnected
-            ? "Connected to Cursor MCP server"
-            : "Not connected to Cursor MCP server");
-        connectionStatus.className = `status ${
-          isConnected ? "connected" : "disconnected"
-        }`;
+          message || (isConnected ? "Connected to server" : "Not connected to server");
+        connectionStatus.className = `status ${isConnected ? "connected" : "disconnected"}`;
     
         connectButton.disabled = isConnected;
         disconnectButton.disabled = !isConnected;
@@ -410,7 +257,6 @@
           state.socket = new WebSocket(`ws://localhost:${port}`);
     
           state.socket.onopen = () => {
-            // Send join message to the server
             state.socket.send(
               JSON.stringify({
                 type: "join",
@@ -425,20 +271,15 @@
               console.log("Received message:", data);
     
               if (data.type === "system") {
-                // Successfully connected to the server
                 if (data.message && data.message.result) {
                   state.connected = true;
-                  updateConnectionStatus(
-                    true,
-                    `Connected to server on port ${port}`
-                  );
+                  updateConnectionStatus(true, `Connected to server on port ${port}`);
     
-                  // Notify the plugin code
                   parent.postMessage(
                     {
                       pluginMessage: {
                         type: "notify",
-                        message: `Connected to Cursor MCP server on port ${port}`,
+                        message: `Connected to server on port ${port}`,
                       },
                     },
                     "*"
@@ -470,10 +311,7 @@
           };
         } catch (error) {
           console.error("Connection error:", error);
-          updateConnectionStatus(
-            false,
-            `Connection error: ${error.message || "Unknown error"}`
-          );
+          updateConnectionStatus(false, `Connection error: ${error.message || "Unknown error"}`);
         }
       }
     
@@ -489,46 +327,39 @@
     
       // Function to add a log entry
       function addLogEntry(entry) {
-        // Add to logs array but keep size limited
         state.logs.push(entry);
         if (state.logs.length > state.maxLogs) {
-          state.logs.shift(); // Remove oldest log
+          state.logs.shift();
         }
         
-        // Format timestamp
         const date = new Date(entry.timestamp);
         const timeString = date.toLocaleTimeString();
         
-        // Create log element
         const logElement = document.createElement("div");
         logElement.className = `log-entry ${entry.direction}`;
         
-        // Create direction indicator
         const directionSpan = document.createElement("span");
         directionSpan.className = `log-direction ${entry.direction}`;
         directionSpan.textContent = entry.direction.substring(0, 3).toUpperCase();
         
-        // Create timestamp span
         const timeSpan = document.createElement("span");
         timeSpan.className = "timestamp";
         timeSpan.textContent = timeString;
         
-        // Create content span
         const contentSpan = document.createElement("div");
         contentSpan.innerHTML = `<strong>${entry.type}</strong>: ${formatLogData(entry.data)}`;
         
-        // Assemble log entry
         logElement.appendChild(directionSpan);
         logElement.appendChild(document.createTextNode(" "));
         logElement.appendChild(timeSpan);
         logElement.appendChild(document.createTextNode(" - "));
         logElement.appendChild(contentSpan);
         
-        // Add to both log panels
-        logPanel.appendChild(logElement.cloneNode(true));
+        logPanel.appendChild(logElement);
+        logPanelTab.appendChild(logElement.cloneNode(true));
         
-        // Scroll to bottom for both panels
         logPanel.scrollTop = logPanel.scrollHeight;
+        logPanelTab.scrollTop = logPanelTab.scrollHeight;
       }
     
       // Format log data nicely
@@ -538,7 +369,6 @@
         }
         
         if (typeof data === "object") {
-          // Keep it simple by limiting depth for readability
           try {
             const simplified = simplifyObject(data, 2);
             return JSON.stringify(simplified, null, 2)
@@ -583,8 +413,8 @@
       function clearLogs() {
         state.logs = [];
         logPanel.innerHTML = '';
+        logPanelTab.innerHTML = '';
         
-        // Notify plugin
         parent.postMessage({
           pluginMessage: {
             type: "clear-logs"
@@ -593,13 +423,13 @@
       }
     
       btnClearLogs.addEventListener("click", clearLogs);
+      btnClearLogsTab.addEventListener("click", clearLogs);
     
       // Handle messages from the WebSocket
       async function handleSocketMessage(payload) {
         const data = payload.message;
         console.log("handleSocketMessage", data);
     
-        // If it's a response to a previous request
         if (data && data.id && state.pendingRequests.has(data.id)) {
           const { resolve, reject } = state.pendingRequests.get(data.id);
           state.pendingRequests.delete(data.id);
@@ -612,10 +442,8 @@
           return;
         }
     
-        // If it's a new command
         if (data && data.command) {
           try {
-            // Send the command to the plugin code
             parent.postMessage(
               {
                 pluginMessage: {
@@ -628,7 +456,6 @@
               "*"
             );
           } catch (error) {
-            // Send error back to WebSocket
             sendErrorResponse(
               data.id,
               error.message || "Error executing command"
@@ -660,7 +487,6 @@
             })
           );
     
-          // Set timeout to reject the promise after 30 seconds
           setTimeout(() => {
             if (state.pendingRequests.has(id)) {
               state.pendingRequests.delete(id);
@@ -707,9 +533,7 @@
     
       // Helper to generate unique IDs
       function generateId() {
-        return (
-          Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
-        );
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
       }
     
       // Tab switching
@@ -739,20 +563,16 @@
         disconnectFromServer();
       });
     
-      // Function to update progress UI
+      // Update progress UI
       function updateProgressUI(progressData) {
-        // Show progress container if hidden
         progressContainer.classList.remove("hidden");
         
-        // Update progress bar
         const progress = progressData.progress || 0;
         progressBar.style.width = `${progress}%`;
         progressPercentage.textContent = `${progress}%`;
         
-        // Update message
         progressMessage.textContent = progressData.message || "Operation in progress";
         
-        // Update status text based on operation state
         if (progressData.status === 'started') {
           progressStatus.textContent = "Started";
           progressStatus.className = "";
@@ -763,7 +583,6 @@
           progressStatus.textContent = "Completed";
           progressStatus.className = "operation-complete";
           
-          // Hide progress container after 5 seconds
           setTimeout(() => {
             progressContainer.classList.add("hidden");
           }, 5000);
@@ -780,8 +599,6 @@
           return;
         }
         
-        console.log("Sending progress update to server:", progressData);
-        
         state.socket.send(
           JSON.stringify({
             id: progressData.commandId,
@@ -793,16 +610,6 @@
             }
           })
         );
-      }
-      
-      // Reset progress UI
-      function resetProgressUI() {
-        progressContainer.classList.add("hidden");
-        progressBar.style.width = "0%";
-        progressMessage.textContent = "No operation in progress";
-        progressStatus.textContent = "Not started";
-        progressStatus.className = "";
-        progressPercentage.textContent = "0%";
       }
     
       // Listen for messages from the plugin code
@@ -823,17 +630,13 @@
             disconnectButton.click();
             break;
           case "command-result":
-            // Forward the result from plugin code back to WebSocket
             sendSuccessResponse(message.id, message.result);
             break;
           case "command-error":
-            // Forward the error from plugin code back to WebSocket
             sendErrorResponse(message.id, message.error);
             break;
           case "command_progress":
-            // Update UI with progress information
             updateProgressUI(message);
-            // Forward progress update to server
             sendProgressUpdateToServer(message);
             break;
         }
@@ -851,7 +654,6 @@
             data: parsedData
           });
         } catch (e) {
-          // If data isn't JSON, just log it as a string
           addLogEntry({
             timestamp: new Date().toISOString(),
             direction: "outgoing",
