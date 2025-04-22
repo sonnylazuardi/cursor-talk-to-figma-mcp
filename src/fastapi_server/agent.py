@@ -1,8 +1,10 @@
+# fastapi_server/agent.py
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_openai import ChatOpenAI
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
+from langchain.schema.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -40,6 +42,32 @@ async def shutdown():
     if stdio_context:
         await stdio_context.__aexit__(None, None, None)
 
-async def run_agent(user_input: str):
+async def run_agent(user_input: list):
     global agent
-    return await agent.ainvoke({"messages": user_input})
+
+    human_message = HumanMessage(content=user_input)
+    return await agent.ainvoke({"messages": [human_message]})
+
+
+# TODO: Remove this function after testing to integrate with run_agent
+async def run_agent_with_image(text: str, base64_image: str):
+    global agent
+    message = [
+        AIMessage(
+            content="You are a helpful assistant skilled at designing UI/UX."
+        ),
+        HumanMessage(
+            content=[
+                {"type": "text", "text": text},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{base64_image}",
+                        "detail": "auto"
+                    }
+                }
+            ]
+        )
+    ]
+    response = await agent.ainvoke({"messages": message})
+    return response.content
