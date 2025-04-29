@@ -48,6 +48,10 @@ bunx cursor-talk-to-figma-mcp
 
 Thanks to [@dusskapark](https://github.com/dusskapark) for contributing the bulk text replacement feature. Here is the [demo video](https://www.youtube.com/watch?v=j05gGT3xfCs).
 
+**Instance Override Propagation**
+Another contribution from [@dusskapark](https://github.com/dusskapark)
+Propagate component instance overrides from a source instance to multiple target instances with a single command. This feature dramatically reduces repetitive design work when working with component instances that need similar customizations. Check out our [demo video](https://youtu.be/uvuT8LByroI).
+
 ## Manual Setup and Installation
 
 ### MCP Server: Integration with Cursor
@@ -128,6 +132,12 @@ The MCP server provides the following tools for interacting with Figma:
 - `set_multiple_annotations` - Batch create/update multiple annotations efficiently
 - `scan_nodes_by_types` - Scan for nodes with specific types (useful for finding annotation targets)
 
+### Prototyping & Connections
+
+- `get_reactions` - Get all prototype reactions from nodes with visual highlight animation
+- `set_default_connector` - Set a copied FigJam connector as the default connector style for creating connections (must be set before creating connections)
+- `create_connections` - Create FigJam connector lines between nodes, based on prototype flows or custom mapping
+
 ### Creating Elements
 
 - `create_rectangle` - Create a new rectangle with position, size, and optional name
@@ -139,6 +149,14 @@ The MCP server provides the following tools for interacting with Figma:
 - `scan_text_nodes` - Scan text nodes with intelligent chunking for large designs
 - `set_text_content` - Set the text content of a single text node
 - `set_multiple_text_contents` - Batch update multiple text nodes efficiently
+
+### Auto Layout & Spacing
+
+- `set_layout_mode` - Set the layout mode and wrap behavior of a frame (NONE, HORIZONTAL, VERTICAL)
+- `set_padding` - Set padding values for an auto-layout frame (top, right, bottom, left)
+- `set_axis_align` - Set primary and counter axis alignment for auto-layout frames
+- `set_layout_sizing` - Set horizontal and vertical sizing modes for auto-layout frames (FIXED, HUG, FILL)
+- `set_item_spacing` - Set distance between children in an auto-layout frame
 
 ### Styling
 
@@ -159,6 +177,8 @@ The MCP server provides the following tools for interacting with Figma:
 - `get_styles` - Get information about local styles
 - `get_local_components` - Get information about local components
 - `create_component_instance` - Create an instance of a component
+- `get_instance_overrides` - Extract override properties from a selected component instance
+- `set_instance_overrides` - Apply extracted overrides to target instances
 
 ### Export & Advanced
 
@@ -167,6 +187,17 @@ The MCP server provides the following tools for interacting with Figma:
 ### Connection Management
 
 - `join_channel` - Join a specific channel to communicate with Figma
+
+### MCP Prompts
+
+The MCP server includes several helper prompts to guide you through complex design tasks:
+
+- `design_strategy` - Best practices for working with Figma designs
+- `read_design_strategy` - Best practices for reading Figma designs
+- `text_replacement_strategy` - Systematic approach for replacing text in Figma designs
+- `annotation_conversion_strategy` - Strategy for converting manual annotations to Figma's native annotations
+- `swap_overrides_instances` - Strategy for transferring overrides between component instances in Figma
+- `reaction_to_connector_strategy` - Strategy for converting Figma prototype reactions to connector lines using the output of 'get_reactions', and guiding the use 'create_connections' in sequence
 
 ## Development
 
@@ -210,6 +241,11 @@ When working with the Figma MCP:
     - Create native annotations with `set_multiple_annotations` in batches
     - Verify all annotations are properly linked to their targets
     - Delete legacy annotation nodes after successful conversion
+11. Visualize prototype noodles as FigJam connectors:
+
+- Use `get_reactions` to extract prototype flows,
+- set a default connector with `set_default_connector`,
+- and generate connector lines with `create_connections` for clear visual flow mapping.
 
 ## License
 
