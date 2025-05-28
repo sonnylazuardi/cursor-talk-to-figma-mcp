@@ -229,6 +229,16 @@ async function handleCommand(command, params) {
       return await setDefaultConnector(params);
     case "create_connections":
       return await createConnections(params);
+    case "list_variables":
+      return await listVariables();
+    case "get_node_variables":
+      return await getNodeVariables(params);
+    case "set_node_variable":
+      return await setNodeVariable(params);
+    case "set_node_paints":
+      return await setNodePaints(params);
+    case "get_node_paints":
+      return await getNodePaints(params);
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -1387,6 +1397,78 @@ async function setTextContent(params) {
   }
 }
 
+// === Figma Variables Support ===
+
+// List all local variables in the document
+async function listVariables() {
+  if (!figma.variables || !figma.variables.getLocalVariablesAsync) {
+    throw new Error("Figma Variables API not available");
+  }
+  const variables = await figma.variables.getLocalVariablesAsync();
+  return variables.map(v => ({
+    id: v.id,
+    name: v.name,
+    key: v.key,
+    resolvedType: v.resolvedType,
+    valuesByMode: v.valuesByMode,
+    scopes: v.scopes,
+    description: v.description
+  }));
+}
+
+// Get variable bindings for a node
+async function getNodeVariables(params) {
+  const { nodeId } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (!node.boundVariables) return { nodeId, boundVariables: null };
+  return { nodeId, boundVariables: node.boundVariables };
+}
+
+// Set a variable binding on a node
+async function setNodeVariable(params) {
+  const { nodeId, property, variableId } = params || {};
+  if (!nodeId || !property || !variableId) throw new Error("Missing nodeId, property, or variableId");
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (!node.setBoundVariable) throw new Error("Node does not support variable binding");
+  await node.setBoundVariable(property, variableId);
+  return { nodeId, property, variableId, success: true };
+}
+
+// --- setNodePaints: Set fills or strokes on a node ---
+async function setNodePaints(params) {
+  const { nodeId, paints, paintsType = "fills" } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!Array.isArray(paints)) throw new Error("'paints' must be an array");
+  if (paintsType !== "fills" && paintsType !== "strokes") throw new Error("paintsType must be 'fills' or 'strokes'");
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (!(paintsType in node)) throw new Error(`Node does not support ${paintsType}: ${nodeId}`);
+  node[paintsType] = paints;
+  return {
+    id: node.id,
+    name: node.name,
+    [paintsType]: node[paintsType],
+  };
+}
+
+// --- getNodePaints: Get fills or strokes from a node ---
+async function getNodePaints(params) {
+  const { nodeId, paintsType = "fills" } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (paintsType !== "fills" && paintsType !== "strokes") throw new Error("paintsType must be 'fills' or 'strokes'");
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (!(paintsType in node)) throw new Error(`Node does not support ${paintsType}: ${nodeId}`);
+  return {
+    id: node.id,
+    name: node.name,
+    [paintsType]: node[paintsType],
+  };
+}
+
 // Initialize settings on load
 (async function initializePlugin() {
   try {
@@ -2386,17 +2468,17 @@ async function getAnnotations(params) {
         throw new Error(`Node type ${node.type} does not support annotations`);
       }
 
-      const result = {
+      const response = {
         nodeId: node.id,
         name: node.name,
         annotations: node.annotations || [],
       };
 
       if (includeCategories) {
-        result.categories = Object.values(categoriesMap);
+        response.categories = Object.values(categoriesMap);
       }
 
-      return result;
+      return response;
     } else {
       // Get all annotations in the current page
       const annotations = [];
