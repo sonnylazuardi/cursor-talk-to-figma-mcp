@@ -729,22 +729,40 @@ server.tool(
 // Set Node Paints Tool
 server.tool(
   "set_node_paints",
-  "Replace the Paint[] definition (either fills or strokes) on a node in Figma. Supply an array of objects that follow the Figma Plugin API Paint specification (https://www.figma.com/plugin-docs/api/Paint/).",
+  "Replace the Paint definition (either fills or strokes) on a node and set color variables to the node.",
   {
     nodeId: z.string().describe("The ID of the node to modify"),
-paints: z
-  .array(
-    // an open object is enough to satisfy “items must have schema”
-    z.object({}).catchall(z.unknown())
-  )
-  .describe(
-    "Array of Paint objects. Each object must conform to the Paint interface: type, opacity, color, gradientStops, scaleMode, imageHash, etc."
-  ),
+    paints: z
+    .array(
+      z.object({
+        type: z.enum([
+          'SOLID',
+          'GRADIENT_LINEAR',
+          'GRADIENT_RADIAL',
+          'GRADIENT_ANGULAR',
+          'GRADIENT_DIAMOND',
+          'IMAGE',
+          'VIDEO',
+          'VARIABLE_ALIAS',
+        ]),
+        visible: z.boolean().optional(),
+        opacity: z.number().min(0).max(1).optional(),
+        blendMode: z.string().optional(),
+        boundVariables: z.object({
+          color: z.object({
+            type: z.string().optional(),
+            variableId: z.string().describe("The ID of the variable to bind to the color in the format like VariableID:3:4"),
+        }).describe("Optional bound variables for the paint").optional(),
+      }).catchall(z.unknown())
+  })
+    .describe(
+      "Array of Paint objects. Each object must conform to the Paint interface: type, opacity, color, gradientStops, scaleMode, imageHash, etc."
+    )),
     paintsType: z
-      .enum(["fills", "strokes"])
-      .optional()
-      .default("fills")
-      .describe("Whether to apply the paints to 'fills' (default) or 'strokes'."),
+    .enum(["fills", "strokes"])
+    .optional()
+    .default("fills")
+    .describe("Whether to apply the paints to 'fills' (default) or 'strokes'."),
   },
   async ({ nodeId, paints, paintsType }) => {
     try {
@@ -1082,7 +1100,37 @@ server.tool(
           {
             type: "text",
             text: `Error getting local components: ${error instanceof Error ? error.message : String(error)
-              }`,
+            }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Get Team Components Tool
+server.tool(
+  "get_team_components",
+  "Get all team components from the Figma document",
+  {},
+  async () => {
+    try {
+      const result = await sendCommandToFigma("get_team_components");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting team components: ${error instanceof Error ? error.message : String(error)
+            }`,
           },
         ],
       };
@@ -2694,85 +2742,51 @@ server.tool(
   }
 );
 
-// Figma Variables: Set a variable binding on a node
-server.tool(
-  "set_node_variable",
-  "Set a variable binding on a node. You must specify the node ID, the property type (e.g., 'fills', 'strokes', 'opacity', etc.), the variable ID, and the optional collection mode (e.g., 'MODE_ID').",
-  {
-    nodeId: z.string().describe("The ID of the node to set the variable binding on"),
-    property: z.string().describe("The property to bind the variable to (e.g., 'fills', 'strokes', 'opacity', etc.)"),
-    variableId: z.string().describe("The ID of the variable to bind"),
-    modeId: z.string().optional().describe("Optional: The mode ID for the variable collection (for multi-mode variables)")
-  },
-  async ({ nodeId, property, variableId, modeId }: { nodeId: string; property: string; variableId: string; modeId?: string }): Promise<any> => {
-    try {
-      const result = await sendCommandToFigma("set_node_variable", { nodeId, property, variableId, modeId });
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Set variable '${variableId}' for property '${property}' on node '${nodeId}'. Result: ${JSON.stringify(result)}`
-          }
-        ]
-      };
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error setting node variable: ${error instanceof Error ? error.message : String(error)}`
-          }
-        ]
-      };
-    }
-  }
-);
-
 // Define command types and parameters
 type FigmaCommand =
-  | "get_document_info"
-  | "get_selection"
-  | "get_node_info"
-  | "get_nodes_info"
-  | "read_my_design"
-  | "create_rectangle"
-  | "create_frame"
-  | "create_text"
-  | "set_fill_color"
-  | "set_stroke_color"
-  | "move_node"
-  | "resize_node"
-  | "delete_node"
-  | "delete_multiple_nodes"
-  | "get_styles"
-  | "get_local_components"
-  | "create_component_instance"
-  | "get_instance_overrides"
-  | "set_instance_overrides"
-  | "export_node_as_image"
-  | "join"
-  | "set_corner_radius"
-  | "clone_node"
-  | "set_text_content"
-  | "scan_text_nodes"
-  | "set_multiple_text_contents"
-  | "get_annotations"
-  | "set_annotation"
-  | "set_multiple_annotations"
-  | "scan_nodes_by_types"
-  | "set_layout_mode"
-  | "set_padding"
-  | "set_axis_align"
-  | "set_layout_sizing"
-  | "set_item_spacing"
-  | "get_reactions"
-  | "set_default_connector"
-  | "create_connections"
-  | "list_variables"
-  | "get_node_variables"
-  | "set_node_variable"
-  | "get_node_paints"
-  | "set_node_paints";
+| "get_document_info"
+| "get_selection"
+| "get_node_info"
+| "get_nodes_info"
+| "read_my_design"
+| "create_rectangle"
+| "create_frame"
+| "create_text"
+| "set_fill_color"
+| "set_stroke_color"
+| "move_node"
+| "resize_node"
+| "delete_node"
+| "delete_multiple_nodes"
+| "get_styles"
+| "get_local_components"
+| "get_team_components"
+| "create_component_instance"
+| "get_instance_overrides"
+| "set_instance_overrides"
+| "export_node_as_image"
+| "join"
+| "set_corner_radius"
+| "clone_node"
+| "set_text_content"
+| "scan_text_nodes"
+| "set_multiple_text_contents"
+| "get_annotations"
+| "set_annotation"
+| "set_multiple_annotations"
+| "scan_nodes_by_types"
+| "set_layout_mode"
+| "set_padding"
+| "set_axis_align"
+| "set_layout_sizing"
+| "set_item_spacing"
+| "get_reactions"
+| "set_default_connector"
+| "create_connections"
+| "list_variables"
+| "get_node_variables"
+| "get_node_paints"
+| "set_node_paints";
 
 type CommandParams = {
   get_document_info: Record<string, never>;
@@ -2917,16 +2931,36 @@ type CommandParams = {
   };
   list_variables: Record<string, never>;
   get_node_variables: { nodeId: string };
-  set_node_variable: { nodeId: string; property: string; variableId: string; modeId?: string };
   get_node_paints: { nodeId: string };
   set_node_paints: {
     nodeId: string;
     paints: Array<{
-      type: string;
-      color?: { r: number; g: number; b: number };
+      type:
+        | 'SOLID'
+        | 'GRADIENT_LINEAR'
+        | 'GRADIENT_RADIAL'
+        | 'GRADIENT_ANGULAR'
+        | 'GRADIENT_DIAMOND'
+        | 'IMAGE'
+        | 'VIDEO'
+        | 'VARIABLE_ALIAS';
+      visible?: boolean;
+      opacity?: number;
+      blendMode?: string;
+      boundVariables?: {
+        color?: {
+          type: string;
+          variableId: string;
+        };
+        [key: string]: unknown;
+      };
+      color?: { r: number; g: number; b: number; a?: number };
       gradientStops?: Array<{ color: { r: number; g: number; b: number; a?: number }; position: number }>;
       imageRef?: string;
+      // Allow additional properties as per Paint interface
+      [key: string]: unknown;
     }>;
+    paintsType?: "fills" | "strokes";
   };
 };
 

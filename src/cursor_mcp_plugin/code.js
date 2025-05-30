@@ -1,6 +1,5 @@
 // This is the main code file for the Cursor MCP Figma plugin
 // It handles Figma API commands
-
 // Plugin state
 const state = {
   serverPort: 3055, // Default port
@@ -143,8 +142,8 @@ async function handleCommand(command, params) {
       return await getStyles();
     case "get_local_components":
       return await getLocalComponents();
-    // case "get_team_components":
-    //   return await getTeamComponents();
+    case "get_team_components":
+      return await getTeamComponents();
     case "create_component_instance":
       return await createComponentInstance(params);
     case "export_node_as_image":
@@ -233,8 +232,6 @@ async function handleCommand(command, params) {
       return await listVariables();
     case "get_node_variables":
       return await getNodeVariables(params);
-    case "set_node_variable":
-      return await setNodeVariable(params);
     case "set_node_paints":
       return await setNodePaints(params);
     case "get_node_paints":
@@ -1150,24 +1147,24 @@ async function getLocalComponents() {
   };
 }
 
-// async function getTeamComponents() {
-//   try {
-//     const teamComponents =
-//       await figma.teamLibrary.getAvailableComponentsAsync();
+async function getTeamComponents() {
+  try {
+    const teamComponents =
+      await figma.teamLibrary.getAvailableComponentsAsync();
 
-//     return {
-//       count: teamComponents.length,
-//       components: teamComponents.map((component) => ({
-//         key: component.key,
-//         name: component.name,
-//         description: component.description,
-//         libraryName: component.libraryName,
-//       })),
-//     };
-//   } catch (error) {
-//     throw new Error(`Error getting team components: ${error.message}`);
-//   }
-// }
+    return {
+      count: teamComponents.length,
+      components: teamComponents.map((component) => ({
+        key: component.key,
+        name: component.name,
+        description: component.description,
+        libraryName: component.libraryName,
+      })),
+    };
+  } catch (error) {
+    throw new Error(`Error getting team components: ${error.message}`);
+  }
+}
 
 async function createComponentInstance(params) {
   const { componentKey, x = 0, y = 0 } = params || {};
@@ -1426,31 +1423,117 @@ async function getNodeVariables(params) {
   return { nodeId, boundVariables: node.boundVariables };
 }
 
-// Set a variable binding on a node
-async function setNodeVariable(params) {
-  const { nodeId, property, variableId } = params || {};
-  if (!nodeId || !property || !variableId) throw new Error("Missing nodeId, property, or variableId");
-  const node = await figma.getNodeByIdAsync(nodeId);
-  if (!node) throw new Error(`Node not found: ${nodeId}`);
-  if (!node.setBoundVariable) throw new Error("Node does not support variable binding");
-  await node.setBoundVariable(property, variableId);
-  return { nodeId, property, variableId, success: true };
-}
-
 // --- setNodePaints: Set fills or strokes on a node ---
 async function setNodePaints(params) {
   const { nodeId, paints, paintsType = "fills" } = params || {};
   if (!nodeId) throw new Error("Missing nodeId parameter");
   if (!Array.isArray(paints)) throw new Error("'paints' must be an array");
   if (paintsType !== "fills" && paintsType !== "strokes") throw new Error("paintsType must be 'fills' or 'strokes'");
+
+  // Get target node
   const node = await figma.getNodeByIdAsync(nodeId);
   if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
   if (!(paintsType in node)) throw new Error(`Node does not support ${paintsType}: ${nodeId}`);
-  node[paintsType] = paints;
+
+  // Validate and format each paint object asynchronously
+  const validatedPaints = await Promise.all(paints.map(async paint => {
+    // Validate paint type
+    if (!paint.type || !['SOLID', 'GRADIENT_LINEAR', 'GRADIENT_RADIAL', 
+        'GRADIENT_ANGULAR', 'GRADIENT_DIAMOND', 'IMAGE', 'VIDEO'].includes(paint.type)) {
+      throw new Error(`Invalid paint type: ${paint.type}`);
+    }
+
+    // Format based on paint type
+    let formattedPaint;
+    switch (paint.type) {
+      case 'SOLID':
+        if (!paint.color && paint.boundVariables && paint.boundVariables.color) {
+          // get variable color and return as formatted paint
+          console.log(`Using bound variable color for SOLID paint ${paint.boundVariables.color}`);
+          const variableColor = await figma.variables.getVariableByIdAsync(paint.boundVariables.color.variableId);
+          //get value from variable for default mode 
+          console.log('variableColor', variableColor);
+
+          const variableColorValue = Object.values(variableColor.valuesByMode)[0];
+          console.log('variableColorValue', variableColorValue);
+
+          console.log(variableColor);
+          formattedPaint = {
+            type: 'SOLID',
+            color: {
+              r: Number(variableColorValue.r || 0),
+              g: Number(variableColorValue.g || 0),
+              b: Number(variableColorValue.b || 0)
+            },
+            opacity: Number(paint.opacity || 1)
+          };
+        } else {
+          formattedPaint = {
+            type: 'SOLID',
+            color: {
+              r: Number(paint.color.r || 0),
+              g: Number(paint.color.g || 0),
+              b: Number(paint.color.b || 0)
+            },
+            opacity: Number(paint.opacity || 1)
+          };
+        }
+        break;
+
+      case 'GRADIENT_LINEAR':
+      case 'GRADIENT_RADIAL':
+      case 'GRADIENT_ANGULAR':
+      case 'GRADIENT_DIAMOND':
+        if (!paint.gradientStops || !Array.isArray(paint.gradientStops)) {
+          throw new Error('Gradient requires gradientStops array');
+        }
+        formattedPaint = {
+          type: paint.type,
+          gradientStops: paint.gradientStops.map(stop => ({
+            position: Number(stop.position || 0),
+            color: {
+              r: Number(stop.color.r || 0),
+              g: Number(stop.color.g || 0),
+              b: Number(stop.color.b || 0),
+              a: Number(stop.color.a || 1)
+            }
+          })),
+          gradientTransform: paint.gradientTransform || [[1,0,0], [0,1,0]]
+        };
+        break;
+
+      case 'IMAGE':
+        formattedPaint = {
+          type: 'IMAGE',
+          scaleMode: paint.scaleMode || 'FILL',
+          imageHash: paint.imageHash,
+          opacity: Number(paint.opacity || 1)
+        };
+        break;
+
+      default:
+        throw new Error(`Unsupported paint type: ${paint.type}`);
+    }
+
+    if (paint.boundVariables && paint.boundVariables.color) {
+      const variableColor = await figma.variables.getVariableByIdAsync(paint.boundVariables.color.variableId);
+      return figma.variables.setBoundVariableForPaint(formattedPaint, 'color', variableColor);
+    } else {
+      return formattedPaint;
+    }
+  }));
+
+  // Apply validated paints
+  try {
+    node[paintsType] = validatedPaints;
+  } catch (error) {
+    throw new Error(`Error setting ${paintsType}: ${error.message}, ${JSON.stringify(validatedPaints, null, 2)}`);
+  }
+
   return {
     id: node.id,
     name: node.name,
-    [paintsType]: node[paintsType],
+    [paintsType]: node[paintsType]
   };
 }
 
