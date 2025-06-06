@@ -232,6 +232,12 @@ async function handleCommand(command, params) {
       return await listVariables();
     case "get_node_variables":
       return await getNodeVariables(params);
+    case "create_variable":
+      return await createVariable(params);
+    case "set_variable_value":
+      return await setVariableValue(params);
+    case "list_collections":
+      return await listCollections();
     case "set_node_paints":
       return await setNodePaints(params);
     case "get_node_paints":
@@ -1421,6 +1427,114 @@ async function getNodeVariables(params) {
   if (!node) throw new Error(`Node not found: ${nodeId}`);
   if (!node.boundVariables) return { nodeId, boundVariables: null };
   return { nodeId, boundVariables: node.boundVariables };
+}
+
+async function listCollections(params) { 
+  if (!figma.variables || !figma.variables.getLocalVariableCollectionsAsync) {
+    throw new Error("Figma Variables API not available");
+  }
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  return collections.map(c => ({
+    id: c.id,
+    name: c.name,
+    key: c.key,
+    description: c.description
+  }));
+}
+
+/**
+ * Creates a new variable in the Figma document.
+ * @param {Object} params
+ * @param {string} params.name - The name of the variable
+ * @param {"FLOAT"|"STRING"|"BOOLEAN"|"COLOR"} params.resolvedType - The type of the variable
+ * @param {string} [params.description] - Optional description
+ * @param {string} collectionId - The Figma collection to contain the variable.
+ * @returns {Promise<Object>} - The created variable object
+ */
+async function createVariable(params) {
+  if (!figma.variables || !figma.variables.createVariable) {
+    throw new Error("Figma Variables API not available");
+  }
+  const { name, resolvedType, description, collectionId } = params || {};
+  if (!name || !resolvedType) {
+    throw new Error("Missing required parameters: name, resolvedType");
+  }
+  const collection = await figma.variables.getVariableCollectionByIdAsync(collectionId);
+  if (!collection) {
+    throw new Error(`Variable collection not found: ${collectionId}`);
+  }
+  const variable = figma.variables.createVariable(name, collection, resolvedType);
+  if (description) variable.description = description;
+  return {
+    id: variable.id,
+    name: variable.name,
+    key: variable.key,
+    resolvedType: variable.resolvedType,
+    valuesByMode: variable.valuesByMode,
+    scopes: variable.scopes,
+    description: variable.description
+  };
+}
+
+/**
+ * Sets a value for a Figma variable in a specific mode.
+ * Supports setting direct values (FLOAT, STRING, BOOLEAN, COLOR) or referencing another variable (alias).
+ * 
+ * @async
+ * @function setVariableValue
+ * @param {Object} params - Parameters for setting the variable value.
+ * @param {string} params.variableId - The ID of the variable to update.
+ * @param {string} params.modeId - The ID of the mode to set the value for.
+ * @param {*} params.value - The value to set. For COLOR, should be an object { r, g, b, a }.
+ * @param {"FLOAT"|"STRING"|"BOOLEAN"|"COLOR"} params.valueType - The type of the value to set.
+ * @param {string} [params.variableReferenceId] - Optional. If provided, sets the value as an alias to another variable.
+ * @returns {Promise<Object>} Result object with success status and details of the operation.
+ * @throws {Error} If required parameters are missing, or if the Figma Variables API is not available, or if the value is invalid.
+  */
+
+async function setVariableValue(params) {
+  const { variableId, modeId, value, valueType, variableReferenceId } = params || {};
+  if (!variableId) {
+    throw new Error("Missing variableId or parameter");
+  }
+  if (!figma.variables || !figma.variables.getVariableByIdAsync) {
+    throw new Error("Figma Variables API not available");
+  }
+  const variable = await figma.variables.getVariableByIdAsync(variableId);
+  if (!variable) throw new Error(`Variable not found: ${variableId}`);
+
+  let mode = modeId || Object.keys(variable.valuesByMode)[0];
+
+  // If variableReferenceId is provided, set value as a reference to another variable
+  if (variableReferenceId) {
+    const refVariable = await figma.variables.getVariableByIdAsync(variableReferenceId);
+    if (!refVariable) throw new Error(`Reference variable not found: ${variableReferenceId}`);
+    variable.setValueForMode(mode, { type: "VARIABLE_ALIAS", id: variableReferenceId });
+    return { success: true, variableId, mode, value: { type: "VARIABLE_ALIAS", id: variableReferenceId } };
+  }
+
+  // Otherwise, set the value directly based on valueType
+  if (valueType === "COLOR") {
+    // value should be { r, g, b, a }
+    if (!value || typeof value !== "object" || value.r === undefined || value.g === undefined || value.b === undefined || value.a === undefined) {
+      throw new Error("Invalid color value");
+    }
+    variable.setValueForMode(mode, {
+      r: Number(value.r),
+      g: Number(value.g),
+      b: Number(value.b),
+      a: Number(value.a)
+    });
+  } else if (valueType === "FLOAT") {
+    variable.setValueForMode(mode, Number(value));
+  } else if (valueType === "STRING") {
+    variable.setValueForMode(mode, String(value));
+  } else if (valueType === "BOOLEAN") {
+    variable.setValueForMode(mode, Boolean(value));
+  } else {
+    throw new Error("Unsupported valueType");
+  }
+  return { success: true, variableId, mode, value };
 }
 
 // --- setNodePaints: Set fills or strokes on a node ---

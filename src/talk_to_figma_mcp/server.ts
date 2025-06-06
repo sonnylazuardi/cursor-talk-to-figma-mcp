@@ -1623,6 +1623,86 @@ server.prompt(
   }
 );
 
+server.prompt(
+  "create_third_level_tokens",
+  "Best practices for creating third-level tokens for selection",
+  (extra) => {
+    return {
+      messages: [
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `
+#### 1. Audit the Document
+- **get_selection()** → collect all selected components.
+- For each component ID  
+  • **get_node_info(componentId)** → store name, type, and child hierarchy.
+
+#### 2. Inventory Existing Colour Bindings
+- For every component’s root node  
+  • **scan_nodes_by_types(nodeId, ["TEXT","FRAME","RECTANGLE","ELLIPSE","VECTOR"])**  
+    → iterate through each leaf node.  
+  • On each leaf  
+    – **get_node_paints(nodeId, "fills")**  
+    – **get_node_paints(nodeId, "strokes")**  
+    → If any Paint object is "type":"VARIABLE_REFERENCE", record:  
+      oldVarId, oldVarName, nodeId, property ("fills"/"strokes").
+
+#### 3. Derive New Variable Names  
+_Nomenclature: **(Component-Type)-Element-What-State**_  
+- **Component-Type** = first segment of component.name ("Button / Primary" → “Button”).  
+- **Element** heuristics on node.name  
+  • “label” → "Label"  
+  • “icon”  → "Icon"  
+  • default   → "Background"  
+- **State** heuristics on node.name  
+  • “hover” → "Hover" • “pressed” → "Pressed" • “disabled” → "Disabled" • else → "Enabled".  
+- Assemble **newVarName** = "<Component-Type>/<Element>/<What>/<State>".
+
+#### 4. Create or Re-use 3-Level Variables  
+- **list_variables(collectionName:"Components")** → see if *newVarName* already exists.  
+- If missing → **create_variable(collectionId, newVarName, "COLOR")** → returns *newVarId*.  
+- **set_variable_value(newVarId, {mode:"REFERENCE", id:oldVarId})**  
+  → makes the new variable an **alias** of the old one (no visual change).
+
+#### 5. Re-bind Nodes to New Variables  
+- For each recorded nodeId/property pair  
+  • Build a copy of the paint array, swapping "variableId: oldVarId → newVarId".  
+  • **set_node_paints(nodeId, property, updatedPaints)**.
+
+#### 6. Verification  
+- On completion, loop through the touched nodes again:  
+  • **get_node_paints(nodeId, property)** → confirm *variableId = newVarId*.  
+- Optionally print a Markdown report listing:  
+  • Total components scanned  
+  • New variables created  
+  • Mapping table "oldVarName → newVarName".
+
+#### 7. Safety / Rollback (optional)  
+- Wrap Steps 4-5 in try/catch. If any error:  
+  • **set_node_paints(nodeId, property, originalPaints)** to restore.  
+  • (If you created variables this run) consider deleting them.
+
+---
+##### Example Mapping
+| Component | Node Name | Old Var | New Var (3-Level) |
+|-----------|-----------|---------|--------------------|
+| Button    | Primary BG | Button/Background | **Button-Primary-Background-Enabled** |
+| TextInput | Label Text | Input/Label        | **TextInput-Label-Text-Active**       |
+| Toggle    | Track BG   | Toggle/Track       | **Toggle-Track-Background-Enabled**   |
+
+> Run the steps in order; they're idempotent, so you can re-run safely.  
+> Adjust the Element/State heuristics if your layer naming differs.`,
+          },
+        },
+      ],
+      description: "Best practices for creating third level tokens for selection",
+    };
+  }
+);
+
+
 // Text Node Scanning Tool
 server.tool(
   "scan_text_nodes",
@@ -2042,7 +2122,7 @@ server.prompt(
 
 The process of converting manual annotations (numbered/alphabetical indicators with connected descriptions) to Figma's native annotations:
 
-1. Get selected frame/component information
+1. Get the selected frame/component that contains annotations
 2. Scan and collect all annotation text nodes
 3. Scan target UI elements (components, instances, frames)
 4. Match annotations to appropriate UI elements
@@ -2742,6 +2822,119 @@ server.tool(
   }
 );
 
+// Figma Variables: Create a new variable
+server.tool(
+  "create_variable",
+  "Create a new variable inside a collection. Returns the created variable object.",
+  {
+    name: z.string().describe("The name of the variable"),
+    resolvedType: z.enum(["FLOAT", "STRING", "BOOLEAN", "COLOR"]).describe("The type of the variable"),
+    description: z.string().optional().describe("Optional description for the variable"),
+    collectionId: z.string().describe("Collection ID to create the variable in you may use the 'list_collections' tool to find the collection ID")
+  },
+  async ({ name, resolvedType, description, collectionId }) => {
+    try {
+      // Structure matches Figma plugin API: https://www.figma.com/plugin-docs/api/VariableCollection/
+      const params: any = {
+        name,
+        resolvedType,
+        description,
+        collectionId
+      };
+
+      const result = await sendCommandToFigma("create_variable", params);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error creating variable: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.tool(
+  "set_variable_value",
+  "Set the value of a variable in the Figma document. Returns the updated variable object.",
+  {
+    variableId: z.string().describe("The ID of the variable to update"),
+    modeId: z.string().optional().describe("Optional mode ID for the variable, if applicable"),
+    value: z.object({}).optional().describe("The value for the variable"),
+    valueType: z.enum(["FLOAT", "STRING", "BOOLEAN", "COLOR"]).describe("The type of the value to set"),
+    variableReferenceId: z.string().optional().describe("Optional reference to another variable")
+  },
+  async ({ variableId, modeId, value, valueType, variableReferenceId }) => {
+    try {
+      const result = await sendCommandToFigma("set_variable_value", {
+        variableId,
+        modeId,
+        value,
+        valueType,
+        variableReferenceId
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting variable value: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.tool(
+  "list_collections",
+  "List all variable collections in the Figma document. Returns an array of collection objects, including their id, name, and type.",
+
+  {},
+  async (): Promise<any> => {
+    try {
+      const result = await sendCommandToFigma("list_collections");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing collections: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+
+
 // Define command types and parameters
 type FigmaCommand =
 | "get_document_info"
@@ -2784,10 +2977,14 @@ type FigmaCommand =
 | "set_default_connector"
 | "create_connections"
 | "list_variables"
+| "list_collections"
 | "get_node_variables"
 | "get_node_paints"
-| "set_node_paints";
+| "set_node_paints"
+| "create_variable"
+| "set_variable_value";
 
+// Define the parameters for each command
 type CommandParams = {
   get_document_info: Record<string, never>;
   get_selection: Record<string, never>;
@@ -2930,6 +3127,7 @@ type CommandParams = {
     }>;
   };
   list_variables: Record<string, never>;
+  list_collections: Record<string, never>;
   get_node_variables: { nodeId: string };
   get_node_paints: { nodeId: string };
   set_node_paints: {
@@ -2961,6 +3159,20 @@ type CommandParams = {
       [key: string]: unknown;
     }>;
     paintsType?: "fills" | "strokes";
+  };
+  create_variable: {
+    name: string;
+    resolvedType: "FLOAT" | "STRING" | "BOOLEAN" | "COLOR";
+    scopes: string[];
+    description?: string;
+  };
+  set_variable_value: {
+    variableId: string;
+    modeId?: string;
+    collectionId?: string;
+    valueType: "FLOAT" | "STRING" | "BOOLEAN" | "COLOR";
+    value?: any; // Value can be of any type depending on the variable type
+    variableReferenceId?: string; // Optional reference to another variable
   };
 };
 
