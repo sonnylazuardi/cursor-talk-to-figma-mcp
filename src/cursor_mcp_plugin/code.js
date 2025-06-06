@@ -1,5 +1,6 @@
 // This is the main code file for the Cursor MCP Figma plugin
 // It handles Figma API commands
+
 // Plugin state
 const state = {
   serverPort: 3055, // Default port
@@ -142,8 +143,8 @@ async function handleCommand(command, params) {
       return await getStyles();
     case "get_local_components":
       return await getLocalComponents();
-    case "get_team_components":
-      return await getTeamComponents();
+    // case "get_team_components":
+    //   return await getTeamComponents();
     case "create_component_instance":
       return await createComponentInstance(params);
     case "export_node_as_image":
@@ -1153,24 +1154,24 @@ async function getLocalComponents() {
   };
 }
 
-async function getTeamComponents() {
-  try {
-    const teamComponents =
-      await figma.teamLibrary.getAvailableComponentsAsync();
+// async function getTeamComponents() {
+//   try {
+//     const teamComponents =
+//       await figma.teamLibrary.getAvailableComponentsAsync();
 
-    return {
-      count: teamComponents.length,
-      components: teamComponents.map((component) => ({
-        key: component.key,
-        name: component.name,
-        description: component.description,
-        libraryName: component.libraryName,
-      })),
-    };
-  } catch (error) {
-    throw new Error(`Error getting team components: ${error.message}`);
-  }
-}
+//     return {
+//       count: teamComponents.length,
+//       components: teamComponents.map((component) => ({
+//         key: component.key,
+//         name: component.name,
+//         description: component.description,
+//         libraryName: component.libraryName,
+//       })),
+//     };
+//   } catch (error) {
+//     throw new Error(`Error getting team components: ${error.message}`);
+//   }
+// }
 
 async function createComponentInstance(params) {
   const { componentKey, x = 0, y = 0 } = params || {};
@@ -2665,17 +2666,17 @@ async function getAnnotations(params) {
         throw new Error(`Node type ${node.type} does not support annotations`);
       }
 
-      const response = {
+      const result = {
         nodeId: node.id,
         name: node.name,
         annotations: node.annotations || [],
       };
 
       if (includeCategories) {
-        response.categories = Object.values(categoriesMap);
+        result.categories = Object.values(categoriesMap);
       }
 
-      return response;
+      return result;
     } else {
       // Get all annotations in the current page
       const annotations = [];

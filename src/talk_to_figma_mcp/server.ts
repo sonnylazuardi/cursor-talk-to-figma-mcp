@@ -2042,7 +2042,7 @@ server.prompt(
 
 The process of converting manual annotations (numbered/alphabetical indicators with connected descriptions) to Figma's native annotations:
 
-1. Get the selected frame/component that contains annotations
+1. Get selected frame/component information
 2. Scan and collect all annotation text nodes
 3. Scan target UI elements (components, instances, frames)
 4. Match annotations to appropriate UI elements
@@ -2857,52 +2857,52 @@ server.tool(
 
 // Define command types and parameters
 type FigmaCommand =
-| "get_document_info"
-| "get_selection"
-| "get_node_info"
-| "get_nodes_info"
-| "read_my_design"
-| "create_rectangle"
-| "create_frame"
-| "create_text"
-| "set_fill_color"
-| "set_stroke_color"
-| "move_node"
-| "resize_node"
-| "delete_node"
-| "delete_multiple_nodes"
-| "get_styles"
-| "get_local_components"
-| "get_team_components"
-| "create_component_instance"
-| "get_instance_overrides"
-| "set_instance_overrides"
-| "export_node_as_image"
-| "join"
-| "set_corner_radius"
-| "clone_node"
-| "set_text_content"
-| "scan_text_nodes"
-| "set_multiple_text_contents"
-| "get_annotations"
-| "set_annotation"
-| "set_multiple_annotations"
-| "scan_nodes_by_types"
-| "set_layout_mode"
-| "set_padding"
-| "set_axis_align"
-| "set_layout_sizing"
-| "set_item_spacing"
-| "get_reactions"
-| "set_default_connector"
-| "create_connections"
-| "list_variables"
-| "list_collections"
-| "get_node_variables"
-| "get_node_paints"
-| "set_node_paints"
-| "create_variable"
-| "set_variable_value";
+  | "get_document_info"
+  | "get_selection"
+  | "get_node_info"
+  | "get_nodes_info"
+  | "read_my_design"
+  | "create_rectangle"
+  | "create_frame"
+  | "create_text"
+  | "set_fill_color"
+  | "set_stroke_color"
+  | "move_node"
+  | "resize_node"
+  | "delete_node"
+  | "delete_multiple_nodes"
+  | "get_styles"
+  | "get_local_components"
+  | "get_team_components"
+  | "create_component_instance"
+  | "get_instance_overrides"
+  | "set_instance_overrides"
+  | "export_node_as_image"
+  | "join"
+  | "set_corner_radius"
+  | "clone_node"
+  | "set_text_content"
+  | "scan_text_nodes"
+  | "set_multiple_text_contents"
+  | "get_annotations"
+  | "set_annotation"
+  | "set_multiple_annotations"
+  | "scan_nodes_by_types"
+  | "set_layout_mode"
+  | "set_padding"
+  | "set_axis_align"
+  | "set_layout_sizing"
+  | "set_item_spacing"
+  | "get_reactions"
+  | "set_default_connector"
+  | "create_connections"
+  | "list_variables"
+  | "list_collections"
+  | "get_node_variables"
+  | "get_node_paints"
+  | "set_node_paints"
+  | "create_variable"
+  | "set_variable_value";
 
 // Define the parameters for each command
 type CommandParams = {
@@ -3097,7 +3097,7 @@ type CommandParams = {
 };
 
 
-// Helper function to process Figma node responses
+  // Helper function to process Figma node responses
 function processFigmaNodeResponse(result: unknown): any {
   if (!result || typeof result !== "object") {
     return result;
