@@ -701,7 +701,7 @@ server.tool(
     try {
       const result = await sendCommandToFigma("get_node_paints", {
         nodeId,
-        paintsType: paintsType || "fills",
+        paintsType,
       });
       return {
         content: [

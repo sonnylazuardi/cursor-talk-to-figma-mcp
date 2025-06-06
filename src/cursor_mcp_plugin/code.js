@@ -1563,15 +1563,10 @@ async function setNodePaints(params) {
       case 'SOLID':
         if (!paint.color && paint.boundVariables && paint.boundVariables.color) {
           // get variable color and return as formatted paint
-          console.log(`Using bound variable color for SOLID paint ${paint.boundVariables.color}`);
           const variableColor = await figma.variables.getVariableByIdAsync(paint.boundVariables.color.variableId);
+          
           //get value from variable for default mode 
-          console.log('variableColor', variableColor);
-
           const variableColorValue = Object.values(variableColor.valuesByMode)[0];
-          console.log('variableColorValue', variableColorValue);
-
-          console.log(variableColor);
           formattedPaint = {
             type: 'SOLID',
             color: {
@@ -1631,7 +1626,12 @@ async function setNodePaints(params) {
 
     if (paint.boundVariables && paint.boundVariables.color) {
       const variableColor = await figma.variables.getVariableByIdAsync(paint.boundVariables.color.variableId);
-      return figma.variables.setBoundVariableForPaint(formattedPaint, 'color', variableColor);
+      try {
+        return figma.variables.setBoundVariableForPaint(formattedPaint, 'color', variableColor);
+      } catch (error) {
+        console.error(`Error setting bound variable for paint: ${error.message}`);
+        throw new Error(`Error setting ${formattedPaint}: ${error.message}`);
+      }
     } else {
       return formattedPaint;
     }
