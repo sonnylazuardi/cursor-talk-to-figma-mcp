@@ -729,7 +729,7 @@ server.tool(
 // Set Node Paints Tool
 server.tool(
   "set_node_paints",
-  "Replace the Paint definition (either fills or strokes) on a node and set color variables to the node.",
+  "Bind the fills or strokes of a node to a variable.",
   {
     nodeId: z.string().describe("The ID of the node to modify"),
     paints: z
@@ -2767,7 +2767,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(result, null, 2)
+            text: `The variable has been created ${JSON.stringify(result, null, 2)} now you must 'set_variable_value' to assign the proper value to the variable. The variable will not be usable until it has a value assigned to it.`
           }
         ]
       };
@@ -2790,19 +2790,34 @@ server.tool(
   {
     variableId: z.string().describe("The ID of the variable to update"),
     modeId: z.string().optional().describe("Optional mode ID for the variable, if applicable"),
-    value: z.object({}).optional().describe("The value for the variable"),
+    value: z.object({
+      r: z.number().optional(),
+      g: z.number().optional(),
+      b: z.number().optional(),
+      a: z.number().optional()
+    }).optional().describe("The value for the variable"),
     valueType: z.enum(["FLOAT", "STRING", "BOOLEAN", "COLOR"]).describe("The type of the value to set"),
     variableReferenceId: z.string().optional().describe("Optional reference to another variable")
   },
   async ({ variableId, modeId, value, valueType, variableReferenceId }) => {
     try {
+      const formattedValue = valueType === "COLOR" && value
+        ? {
+            r: value.r || 0,
+            g: value.g || 0,
+            b: value.b || 0,
+            a: value.a || 1
+          }
+        : value;
+
       const result = await sendCommandToFigma("set_variable_value", {
         variableId,
         modeId,
-        value,
+        value: formattedValue,
         valueType,
         variableReferenceId
       });
+
       return {
         content: [
           {
@@ -3097,7 +3112,7 @@ type CommandParams = {
 };
 
 
-  // Helper function to process Figma node responses
+// Helper function to process Figma node responses
 function processFigmaNodeResponse(result: unknown): any {
   if (!result || typeof result !== "object") {
     return result;

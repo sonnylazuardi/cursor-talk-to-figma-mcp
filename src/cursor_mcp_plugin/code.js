@@ -1517,14 +1517,14 @@ async function setVariableValue(params) {
   // Otherwise, set the value directly based on valueType
   if (valueType === "COLOR") {
     // value should be { r, g, b, a }
-    if (!value || typeof value !== "object" || value.r === undefined || value.g === undefined || value.b === undefined || value.a === undefined) {
+    if (!value || typeof value !== "object" || value.r === undefined || value.g === undefined || value.b === undefined) {
       throw new Error("Invalid color value");
     }
     variable.setValueForMode(mode, {
       r: Number(value.r),
       g: Number(value.g),
       b: Number(value.b),
-      a: Number(value.a)
+      a: Number(value.a) || 1
     });
   } else if (valueType === "FLOAT") {
     variable.setValueForMode(mode, Number(value));
