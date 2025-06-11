@@ -685,6 +685,116 @@ server.tool(
   }
 );
 
+// Get Node Paints Tool
+server.tool(
+  "get_node_paints",
+  "Retrieve the Paint[] definition (either fills or strokes) from a node in Figma. The returned array conforms to the Figma Plugin API Paint interface.",
+  {
+    nodeId: z.string().describe("The ID of the node whose paints to retrieve"),
+    paintsType: z
+      .enum(["fills", "strokes"])
+      .optional()
+      .default("fills")
+      .describe("Which paint list to return. Defaults to 'fills'."),
+  },
+  async ({ nodeId, paintsType }) => {
+    try {
+      const result = await sendCommandToFigma("get_node_paints", {
+        nodeId,
+        paintsType,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting node paints: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Node Paints Tool
+server.tool(
+  "set_node_paints",
+  "Bind the fills or strokes of a node to a variable.",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    paints: z
+    .array(
+      z.object({
+        type: z.enum([
+          'SOLID',
+          'GRADIENT_LINEAR',
+          'GRADIENT_RADIAL',
+          'GRADIENT_ANGULAR',
+          'GRADIENT_DIAMOND',
+          'IMAGE',
+          'VIDEO',
+          'VARIABLE_ALIAS',
+        ]),
+        visible: z.boolean().optional(),
+        opacity: z.number().min(0).max(1).optional(),
+        blendMode: z.string().optional(),
+        boundVariables: z.object({
+          color: z.object({
+            type: z.string().optional(),
+            variableId: z.string().describe("The ID of the variable to bind to the color in the format like VariableID:3:4"),
+        }).describe("Optional bound variables for the paint").optional(),
+      }).catchall(z.unknown())
+  })
+    .describe(
+      "Array of Paint objects. Each object must conform to the Paint interface: type, opacity, color, gradientStops, scaleMode, imageHash, etc."
+    )),
+    paintsType: z
+    .enum(["fills", "strokes"])
+    .optional()
+    .default("fills")
+    .describe("Whether to apply the paints to 'fills' (default) or 'strokes'."),
+  },
+  async ({ nodeId, paints, paintsType }) => {
+    try {
+      const result = await sendCommandToFigma("set_node_paints", {
+        nodeId,
+        paints,
+        paintsType: paintsType || "fills",
+      });
+      const typedResult = result as { name: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Updated ${paintsType || "fills"} on node "${typedResult.name}".`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting node paints: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Move Node Tool
 server.tool(
   "move_node",
@@ -990,7 +1100,37 @@ server.tool(
           {
             type: "text",
             text: `Error getting local components: ${error instanceof Error ? error.message : String(error)
-              }`,
+            }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Get Team Components Tool
+server.tool(
+  "get_team_components",
+  "Get all team components from the Figma document",
+  {},
+  async () => {
+    try {
+      const result = await sendCommandToFigma("get_team_components");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting team components: ${error instanceof Error ? error.message : String(error)
+            }`,
           },
         ],
       };
@@ -2542,6 +2682,193 @@ This detailed process ensures you correctly interpret the reaction data, prepare
   }
 );
 
+// Figma Variables: List all variables
+server.tool(
+  "list_variables",
+  "List all local variables in the current Figma document. Returns an array of variable objects, including their id, name, type, and values.",
+  {},
+  async (): Promise<any> => {
+    try {
+      const result = await sendCommandToFigma("list_variables");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing variables: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Figma Variables: Get variable bindings for a node
+server.tool(
+  "get_node_variables",
+  "Get all variable bindings for a specific node. Returns an object mapping property types (e.g., 'fills', 'strokes', 'opacity', etc.) to variable binding info.",
+  {
+    nodeId: z.string().describe("The ID of the node to get variable bindings for")
+  },
+  async ({ nodeId }: { nodeId: string }): Promise<any> => {
+    try {
+      const result = await sendCommandToFigma("get_node_variables", { nodeId });
+      return {
+        content: [
+          {
+            type: "text",
+            text: `These are the variables for the node: ${JSON.stringify(result, null, 2)}, you may use the 'list_variables' tool to find the name of the variables.`,
+          }
+        ]
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting node variables: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Figma Variables: Create a new variable
+server.tool(
+  "create_variable",
+  "Create a new variable inside a collection. Returns the created variable object.",
+  {
+    name: z.string().describe("The name of the variable"),
+    resolvedType: z.enum(["FLOAT", "STRING", "BOOLEAN", "COLOR"]).describe("The type of the variable"),
+    description: z.string().optional().describe("Optional description for the variable"),
+    collectionId: z.string().describe("Collection ID to create the variable in you may use the 'list_collections' tool to find the collection ID")
+  },
+  async ({ name, resolvedType, description, collectionId }) => {
+    try {
+      // Structure matches Figma plugin API: https://www.figma.com/plugin-docs/api/VariableCollection/
+      const params: any = {
+        name,
+        resolvedType,
+        description,
+        collectionId
+      };
+
+      const result = await sendCommandToFigma("create_variable", params);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `The variable has been created ${JSON.stringify(result, null, 2)} now you must 'set_variable_value' to assign the proper value to the variable. The variable will not be usable until it has a value assigned to it.`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error creating variable: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.tool(
+  "set_variable_value",
+  "Set the value of a variable in the Figma document. Returns the updated variable object.",
+  {
+    variableId: z.string().describe("The ID of the variable to update"),
+    modeId: z.string().optional().describe("Optional mode ID for the variable, if applicable"),
+    value: z.object({
+      r: z.number().optional(),
+      g: z.number().optional(),
+      b: z.number().optional(),
+      a: z.number().optional()
+    }).optional().describe("The value for the variable"),
+    valueType: z.enum(["FLOAT", "STRING", "BOOLEAN", "COLOR"]).describe("The type of the value to set"),
+    variableReferenceId: z.string().optional().describe("Optional reference to another variable")
+  },
+  async ({ variableId, modeId, value, valueType, variableReferenceId }) => {
+    try {
+      const formattedValue = valueType === "COLOR" && value
+        ? {
+            r: value.r || 0,
+            g: value.g || 0,
+            b: value.b || 0,
+            a: value.a || 1
+          }
+        : value;
+
+      const result = await sendCommandToFigma("set_variable_value", {
+        variableId,
+        modeId,
+        value: formattedValue,
+        valueType,
+        variableReferenceId
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting variable value: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.tool(
+  "list_collections",
+  "List all variable collections in the Figma document. Returns an array of collection objects, including their id, name, and type.",
+
+  {},
+  async (): Promise<any> => {
+    try {
+      const result = await sendCommandToFigma("list_collections");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing collections: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+
 
 // Define command types and parameters
 type FigmaCommand =
@@ -2561,6 +2888,7 @@ type FigmaCommand =
   | "delete_multiple_nodes"
   | "get_styles"
   | "get_local_components"
+  | "get_team_components"
   | "create_component_instance"
   | "get_instance_overrides"
   | "set_instance_overrides"
@@ -2582,8 +2910,16 @@ type FigmaCommand =
   | "set_item_spacing"
   | "get_reactions"
   | "set_default_connector"
-  | "create_connections";
+  | "create_connections"
+  | "list_variables"
+  | "list_collections"
+  | "get_node_variables"
+  | "get_node_paints"
+  | "set_node_paints"
+  | "create_variable"
+  | "set_variable_value";
 
+// Define the parameters for each command
 type CommandParams = {
   get_document_info: Record<string, never>;
   get_selection: Record<string, never>;
@@ -2725,11 +3061,58 @@ type CommandParams = {
       text?: string;
     }>;
   };
-  
+  list_variables: Record<string, never>;
+  list_collections: Record<string, never>;
+  get_node_variables: { nodeId: string };
+  get_node_paints: { nodeId: string };
+  set_node_paints: {
+    nodeId: string;
+    paints: Array<{
+      type:
+        | 'SOLID'
+        | 'GRADIENT_LINEAR'
+        | 'GRADIENT_RADIAL'
+        | 'GRADIENT_ANGULAR'
+        | 'GRADIENT_DIAMOND'
+        | 'IMAGE'
+        | 'VIDEO'
+        | 'VARIABLE_ALIAS';
+      visible?: boolean;
+      opacity?: number;
+      blendMode?: string;
+      boundVariables?: {
+        color?: {
+          type: string;
+          variableId: string;
+        };
+        [key: string]: unknown;
+      };
+      color?: { r: number; g: number; b: number; a?: number };
+      gradientStops?: Array<{ color: { r: number; g: number; b: number; a?: number }; position: number }>;
+      imageRef?: string;
+      // Allow additional properties as per Paint interface
+      [key: string]: unknown;
+    }>;
+    paintsType?: "fills" | "strokes";
+  };
+  create_variable: {
+    name: string;
+    resolvedType: "FLOAT" | "STRING" | "BOOLEAN" | "COLOR";
+    scopes: string[];
+    description?: string;
+  };
+  set_variable_value: {
+    variableId: string;
+    modeId?: string;
+    collectionId?: string;
+    valueType: "FLOAT" | "STRING" | "BOOLEAN" | "COLOR";
+    value?: any; // Value can be of any type depending on the variable type
+    variableReferenceId?: string; // Optional reference to another variable
+  };
 };
 
 
-  // Helper function to process Figma node responses
+// Helper function to process Figma node responses
 function processFigmaNodeResponse(result: unknown): any {
   if (!result || typeof result !== "object") {
     return result;
