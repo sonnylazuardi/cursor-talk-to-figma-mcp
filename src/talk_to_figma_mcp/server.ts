@@ -5,6 +5,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
+import path from "path";
 
 // Define TypeScript interfaces for Figma responses
 interface FigmaResponse {
@@ -868,23 +870,44 @@ server.tool(
       .optional()
       .describe("Export format"),
     scale: z.number().positive().optional().describe("Export scale"),
+    fileName: z.string().describe("fileName to save as"),
+    path: z.string().describe("The absolute path to save to"),
   },
-  async ({ nodeId, format, scale }) => {
+  async ({ nodeId, format, scale, fileName, path: filePath }) => {
     try {
       const result = await sendCommandToFigma("export_node_as_image", {
         nodeId,
         format: format || "PNG",
         scale: scale || 1,
+        fileName,
+        path: filePath,
       });
       const typedResult = result as { imageData: string; mimeType: string };
+
+      // Create the full file path
+      const fullPath = path.join(filePath, fileName);
+
+      // Ensure the directory exists
+      const dirPath = path.dirname(fullPath);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+
+      // Convert base64 image data to buffer and save to file
+      const imageBuffer = Buffer.from(typedResult.imageData, 'base64');
+      fs.writeFileSync(fullPath, imageBuffer);
 
       return {
         content: [
           {
-            type: "image",
-            data: typedResult.imageData,
-            mimeType: typedResult.mimeType || "image/png",
+            type: "text",
+            text: `file saved to: ${fullPath}`,
           },
+          // {
+          //   type: "image",
+          //   data: typedResult.imageData,
+          //   mimeType: typedResult.mimeType || "image/png",
+          // },
         ],
       };
     } catch (error) {
@@ -2668,6 +2691,8 @@ type CommandParams = {
     nodeId: string;
     format?: "PNG" | "JPG" | "SVG" | "PDF";
     scale?: number;
+    fileName: string;
+    path: string;
   };
   execute_code: {
     code: string;
