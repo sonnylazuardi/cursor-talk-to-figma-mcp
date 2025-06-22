@@ -1,13 +1,343 @@
 // This is the main code file for the Cursor MCP Figma plugin
 // It handles Figma API commands
 
+/**
+ * @typedef {Object} PluginState
+ * @property {number} serverPort - Default port
+ */
+
+/**
+ * @typedef {Object} RGBAColor
+ * @property {number} r - Red component (0-1)
+ * @property {number} g - Green component (0-1)
+ * @property {number} b - Blue component (0-1)
+ * @property {number} [a] - Alpha component (0-1)
+ */
+
+/**
+ * @typedef {Object} NodeInfo
+ * @property {string} id - Node ID
+ * @property {string} name - Node name
+ * @property {string} type - Node type
+ * @property {boolean} [visible] - Node visibility
+ * @property {number} [x] - X position
+ * @property {number} [y] - Y position
+ * @property {number} [width] - Width
+ * @property {number} [height] - Height
+ */
+
+/**
+ * @typedef {Object} CommandProgressUpdate
+ * @property {'command_progress'} type - Message type
+ * @property {string} commandId - Command ID
+ * @property {string} commandType - Command type
+ * @property {'started'|'in_progress'|'completed'|'error'} status - Status
+ * @property {number} progress - Progress percentage (0-100)
+ * @property {number} totalItems - Total items to process
+ * @property {number} processedItems - Items processed so far
+ * @property {number} [currentChunk] - Current chunk number
+ * @property {number} [totalChunks] - Total number of chunks
+ * @property {number} [chunkSize] - Size of each chunk
+ * @property {string} message - Progress message
+ * @property {*} [payload] - Optional payload data
+ * @property {number} timestamp - Timestamp
+ */
+
+/**
+ * @typedef {'get_document_info'|'get_selection'|'get_node_info'|'get_nodes_info'|'read_my_design'|'create_rectangle'|'create_frame'|'create_text'|'set_fill_color'|'set_stroke_color'|'move_node'|'resize_node'|'delete_node'|'delete_multiple_nodes'|'get_styles'|'get_local_components'|'create_component_instance'|'get_instance_overrides'|'set_instance_overrides'|'export_node_as_image'|'join'|'set_corner_radius'|'clone_node'|'set_text_content'|'scan_text_nodes'|'set_multiple_text_contents'|'get_annotations'|'set_annotation'|'set_multiple_annotations'|'scan_nodes_by_types'|'set_layout_mode'|'set_padding'|'set_axis_align'|'set_layout_sizing'|'set_item_spacing'|'get_reactions'|'set_default_connector'|'create_connections'} FigmaCommand
+ */
+
+// === Command Parameter Types ===
+
+/**
+ * @typedef {Object} CreateRectangleParams
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ * @property {number} width - Width
+ * @property {number} height - Height
+ * @property {string} [name] - Name
+ * @property {string} [parentId] - Parent node ID
+ */
+
+/**
+ * @typedef {Object} CreateFrameParams
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ * @property {number} width - Width
+ * @property {number} height - Height
+ * @property {string} [name] - Name
+ * @property {string} [parentId] - Parent node ID
+ * @property {RGBAColor} [fillColor] - Fill color
+ * @property {RGBAColor} [strokeColor] - Stroke color
+ * @property {number} [strokeWeight] - Stroke weight
+ * @property {'NONE'|'HORIZONTAL'|'VERTICAL'} [layoutMode] - Layout mode
+ * @property {'NO_WRAP'|'WRAP'} [layoutWrap] - Layout wrap
+ * @property {number} [paddingTop] - Top padding
+ * @property {number} [paddingRight] - Right padding
+ * @property {number} [paddingBottom] - Bottom padding
+ * @property {number} [paddingLeft] - Left padding
+ * @property {'MIN'|'MAX'|'CENTER'|'SPACE_BETWEEN'} [primaryAxisAlignItems] - Primary axis alignment
+ * @property {'MIN'|'MAX'|'CENTER'|'BASELINE'} [counterAxisAlignItems] - Counter axis alignment
+ * @property {'FIXED'|'HUG'|'FILL'} [layoutSizingHorizontal] - Horizontal sizing
+ * @property {'FIXED'|'HUG'|'FILL'} [layoutSizingVertical] - Vertical sizing
+ * @property {number} [itemSpacing] - Item spacing
+ */
+
+/**
+ * @typedef {Object} CreateTextParams
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ * @property {string} text - Text content
+ * @property {number} [fontSize] - Font size
+ * @property {number} [fontWeight] - Font weight
+ * @property {RGBAColor} [fontColor] - Font color
+ * @property {string} [name] - Name
+ * @property {string} [parentId] - Parent node ID
+ */
+
+/**
+ * @typedef {Object} SetFillColorParams
+ * @property {string} nodeId - Node ID
+ * @property {RGBAColor} color - Color object
+ */
+
+/**
+ * @typedef {Object} SetStrokeColorParams
+ * @property {string} nodeId - Node ID
+ * @property {RGBAColor} color - Color object
+ * @property {number} [weight] - Stroke weight
+ */
+
+/**
+ * @typedef {Object} MoveNodeParams
+ * @property {string} nodeId - Node ID
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ */
+
+/**
+ * @typedef {Object} ResizeNodeParams
+ * @property {string} nodeId - Node ID
+ * @property {number} width - Width
+ * @property {number} height - Height
+ */
+
+/**
+ * @typedef {Object} DeleteNodeParams
+ * @property {string} nodeId - Node ID
+ */
+
+/**
+ * @typedef {Object} DeleteMultipleNodesParams
+ * @property {string[]} nodeIds - Array of node IDs
+ */
+
+/**
+ * @typedef {Object} SetCornerRadiusParams
+ * @property {string} nodeId - Node ID
+ * @property {number} radius - Corner radius
+ * @property {boolean[]} [corners] - Array of 4 booleans for individual corners
+ */
+
+/**
+ * @typedef {Object} CloneNodeParams
+ * @property {string} nodeId - Node ID
+ * @property {number} [x] - X position
+ * @property {number} [y] - Y position
+ */
+
+/**
+ * @typedef {Object} SetTextContentParams
+ * @property {string} nodeId - Node ID
+ * @property {string} text - Text content
+ */
+
+/**
+ * @typedef {Object} GetNodeInfoParams
+ * @property {string} nodeId - Node ID
+ */
+
+/**
+ * @typedef {Object} GetNodesInfoParams
+ * @property {string[]} nodeIds - Array of node IDs
+ */
+
+/**
+ * @typedef {Object} ScanTextNodesParams
+ * @property {string} nodeId - Node ID
+ * @property {boolean} useChunking - Use chunking
+ * @property {number} chunkSize - Chunk size
+ */
+
+/**
+ * @typedef {Object} SetMultipleTextContentsParams
+ * @property {string} nodeId - Container node ID
+ * @property {Array<{nodeId: string, text: string}>} text - Array of text replacements
+ */
+
+/**
+ * @typedef {Object} GetAnnotationsParams
+ * @property {string} [nodeId] - Node ID
+ * @property {boolean} [includeCategories] - Include categories
+ */
+
+/**
+ * @typedef {Object} SetAnnotationParams
+ * @property {string} nodeId - Node ID
+ * @property {string} [annotationId] - Annotation ID
+ * @property {string} labelMarkdown - Label markdown
+ * @property {string} [categoryId] - Category ID
+ * @property {Array<{type: string}>} [properties] - Properties
+ */
+
+/**
+ * @typedef {Object} SetMultipleAnnotationsParams
+ * @property {string} nodeId - Container node ID
+ * @property {Array<{nodeId: string, labelMarkdown: string, categoryId?: string, annotationId?: string, properties?: Array<{type: string}>}>} annotations - Array of annotations
+ */
+
+/**
+ * @typedef {Object} ScanNodesByTypesParams
+ * @property {string} nodeId - Node ID
+ * @property {string[]} types - Array of node types
+ */
+
+/**
+ * @typedef {Object} GetReactionsParams
+ * @property {string[]} nodeIds - Array of node IDs
+ */
+
+/**
+ * @typedef {Object} SetDefaultConnectorParams
+ * @property {string} [connectorId] - Connector ID
+ */
+
+/**
+ * @typedef {Object} CreateConnectionsParams
+ * @property {Array<{startNodeId: string, endNodeId: string, text?: string}>} connections - Array of connections
+ */
+
+/**
+ * @typedef {Object} ExportNodeAsImageParams
+ * @property {string} nodeId - Node ID
+ * @property {'PNG'|'JPG'|'SVG'|'PDF'} [format] - Export format
+ * @property {number} [scale] - Scale
+ */
+
+/**
+ * @typedef {Object} CreateComponentInstanceParams
+ * @property {string} componentKey - Component key
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ */
+
+/**
+ * @typedef {Object} GetInstanceOverridesParams
+ * @property {string|null} instanceNodeId - Instance node ID
+ */
+
+/**
+ * @typedef {Object} SetInstanceOverridesParams
+ * @property {string[]} targetNodeIds - Target node IDs
+ * @property {string} sourceInstanceId - Source instance ID
+ */
+
+/**
+ * @typedef {Object} SetLayoutModeParams
+ * @property {string} nodeId - Node ID
+ * @property {'NONE'|'HORIZONTAL'|'VERTICAL'} layoutMode - Layout mode
+ * @property {'NO_WRAP'|'WRAP'} [layoutWrap] - Layout wrap
+ */
+
+/**
+ * @typedef {Object} SetPaddingParams
+ * @property {string} nodeId - Node ID
+ * @property {number} [paddingTop] - Top padding
+ * @property {number} [paddingRight] - Right padding
+ * @property {number} [paddingBottom] - Bottom padding
+ * @property {number} [paddingLeft] - Left padding
+ */
+
+/**
+ * @typedef {Object} SetAxisAlignParams
+ * @property {string} nodeId - Node ID
+ * @property {'MIN'|'MAX'|'CENTER'|'SPACE_BETWEEN'} [primaryAxisAlignItems] - Primary axis alignment
+ * @property {'MIN'|'MAX'|'CENTER'|'BASELINE'} [counterAxisAlignItems] - Counter axis alignment
+ */
+
+/**
+ * @typedef {Object} SetLayoutSizingParams
+ * @property {string} nodeId - Node ID
+ * @property {'FIXED'|'HUG'|'FILL'} [layoutSizingHorizontal] - Horizontal sizing
+ * @property {'FIXED'|'HUG'|'FILL'} [layoutSizingVertical] - Vertical sizing
+ */
+
+/**
+ * @typedef {Object} SetItemSpacingParams
+ * @property {string} nodeId - Node ID
+ * @property {number} itemSpacing - Item spacing
+ */
+
+// === Result Types ===
+
+/**
+ * @typedef {Object} AnnotationResult
+ * @property {boolean} success - Success status
+ * @property {string} nodeId - Node ID
+ * @property {number} [annotationsApplied] - Number of annotations applied
+ * @property {number} [annotationsFailed] - Number of annotations failed
+ * @property {number} [totalAnnotations] - Total annotations
+ * @property {number} [completedInChunks] - Completed in chunks
+ * @property {Array<{success: boolean, nodeId: string, error?: string, annotationId?: string}>} [results] - Results
+ */
+
+/**
+ * @typedef {Object} TextReplaceResult
+ * @property {boolean} success - Success status
+ * @property {string} nodeId - Node ID
+ * @property {number} [replacementsApplied] - Number of replacements applied
+ * @property {number} [replacementsFailed] - Number of replacements failed
+ * @property {number} [totalReplacements] - Total replacements
+ * @property {number} [completedInChunks] - Completed in chunks
+ * @property {Array<{success: boolean, nodeId: string, error?: string, originalText?: string, translatedText?: string}>} [results] - Results
+ */
+
+/**
+ * @typedef {Object} GetInstanceOverridesResult
+ * @property {boolean} success - Success status
+ * @property {string} message - Message
+ * @property {string} sourceInstanceId - Source instance ID
+ * @property {string} mainComponentId - Main component ID
+ * @property {number} overridesCount - Overrides count
+ */
+
+/**
+ * @typedef {Object} SetInstanceOverridesResult
+ * @property {boolean} success - Success status
+ * @property {string} message - Message
+ * @property {number} [totalCount] - Total count
+ * @property {Array<{success: boolean, instanceId: string, instanceName: string, appliedCount?: number, message?: string}>} [results] - Results
+ */
+
 // Plugin state
+/** @type {PluginState} */
 const state = {
   serverPort: 3055, // Default port
 };
 
 
-// Helper function for progress updates
+/**
+ * Helper function for progress updates
+ * @param {string} commandId - Command ID
+ * @param {string} commandType - Command type
+ * @param {'started'|'in_progress'|'completed'|'error'} status - Status
+ * @param {number} progress - Progress percentage (0-100)
+ * @param {number} totalItems - Total items to process
+ * @param {number} processedItems - Items processed so far
+ * @param {string} message - Progress message
+ * @param {*} [payload] - Optional payload data
+ * @returns {CommandProgressUpdate} Progress update object
+ */
 function sendProgressUpdate(
   commandId,
   commandType,
@@ -102,7 +432,12 @@ function updateSettings(settings) {
   });
 }
 
-// Handle commands from UI
+/**
+ * Handle commands from UI
+ * @param {FigmaCommand} command - Command to execute
+ * @param {*} params - Command parameters
+ * @returns {Promise<*>} Command result
+ */
 async function handleCommand(command, params) {
   switch (command) {
     case "get_document_info":
@@ -275,6 +610,11 @@ async function getSelection() {
   };
 }
 
+/**
+ * Convert RGBA color to hex string
+ * @param {RGBAColor} color - RGBA color object
+ * @returns {string} Hex color string
+ */
 function rgbaToHex(color) {
   var r = Math.round(color.r * 255);
   var g = Math.round(color.g * 255);
@@ -302,6 +642,11 @@ function rgbaToHex(color) {
   );
 }
 
+/**
+ * Filter and process Figma node data
+ * @param {*} node - Figma node object
+ * @returns {*} Filtered node object or null
+ */
 function filterFigmaNode(node) {
   if (node.type === "VECTOR") {
     return null;
@@ -388,6 +733,11 @@ function filterFigmaNode(node) {
   return filtered;
 }
 
+/**
+ * Get information about a specific node
+ * @param {string} nodeId - Node ID
+ * @returns {Promise<*>} Node information
+ */
 async function getNodeInfo(nodeId) {
   const node = await figma.getNodeByIdAsync(nodeId);
 
@@ -402,6 +752,11 @@ async function getNodeInfo(nodeId) {
   return filterFigmaNode(response.document);
 }
 
+/**
+ * Get information about multiple nodes
+ * @param {string[]} nodeIds - Array of node IDs
+ * @returns {Promise<*>} Nodes information
+ */
 async function getNodesInfo(nodeIds) {
   try {
     // Load all nodes in parallel
@@ -645,6 +1000,11 @@ async function readMyDesign() {
   }
 }
 
+/**
+ * Create a rectangle in Figma
+ * @param {CreateRectangleParams} params - Rectangle parameters
+ * @returns {Promise<NodeInfo>} Created rectangle information
+ */
 async function createRectangle(params) {
   const {
     x = 0,
@@ -686,6 +1046,11 @@ async function createRectangle(params) {
   };
 }
 
+/**
+ * Create a frame in Figma
+ * @param {CreateFrameParams} params - Frame parameters
+ * @returns {Promise<NodeInfo>} Created frame information
+ */
 async function createFrame(params) {
   const {
     x = 0,
@@ -802,6 +1167,11 @@ async function createFrame(params) {
   };
 }
 
+/**
+ * Create a text element in Figma
+ * @param {CreateTextParams} params - Text parameters
+ * @returns {Promise<NodeInfo>} Created text information
+ */
 async function createText(params) {
   const {
     x = 0,
@@ -899,6 +1269,11 @@ async function createText(params) {
   };
 }
 
+/**
+ * Set fill color of a node
+ * @param {SetFillColorParams} params - Fill color parameters
+ * @returns {Promise<*>} Result
+ */
 async function setFillColor(params) {
   console.log("setFillColor", params);
   const {
@@ -949,6 +1324,11 @@ async function setFillColor(params) {
   };
 }
 
+/**
+ * Set stroke color of a node
+ * @param {SetStrokeColorParams} params - Stroke color parameters
+ * @returns {Promise<*>} Result
+ */
 async function setStrokeColor(params) {
   const {
     nodeId,
@@ -1003,6 +1383,11 @@ async function setStrokeColor(params) {
   };
 }
 
+/**
+ * Move a node to a new position
+ * @param {MoveNodeParams} params - Move node parameters
+ * @returns {Promise<*>} Result
+ */
 async function moveNode(params) {
   const { nodeId, x, y } = params || {};
 
@@ -1034,6 +1419,11 @@ async function moveNode(params) {
   };
 }
 
+/**
+ * Resize a node
+ * @param {ResizeNodeParams} params - Resize node parameters
+ * @returns {Promise<*>} Result
+ */
 async function resizeNode(params) {
   const { nodeId, width, height } = params || {};
 
@@ -1064,6 +1454,11 @@ async function resizeNode(params) {
   };
 }
 
+/**
+ * Delete a node
+ * @param {DeleteNodeParams} params - Delete node parameters
+ * @returns {Promise<*>} Result
+ */
 async function deleteNode(params) {
   const { nodeId } = params || {};
 
@@ -1300,6 +1695,11 @@ function customBase64Encode(bytes) {
   return base64;
 }
 
+/**
+ * Set corner radius of a node
+ * @param {SetCornerRadiusParams} params - Corner radius parameters
+ * @returns {Promise<*>} Result
+ */
 async function setCornerRadius(params) {
   const { nodeId, radius, corners } = params || {};
 
@@ -1351,6 +1751,11 @@ async function setCornerRadius(params) {
   };
 }
 
+/**
+ * Set text content of a text node
+ * @param {SetTextContentParams} params - Text content parameters
+ * @returns {Promise<*>} Result
+ */
 async function setTextContent(params) {
   const { nodeId, text } = params || {};
 
@@ -2347,7 +2752,10 @@ async function setMultipleTextContents(params) {
   };
 }
 
-// Function to generate simple UUIDs for command IDs
+/**
+ * Function to generate simple UUIDs for command IDs
+ * @returns {string} Generated command ID
+ */
 function generateCommandId() {
   return (
     "cmd_" +
