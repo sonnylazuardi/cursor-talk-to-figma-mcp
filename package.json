@@ -19,7 +19,8 @@
     "build": "tsup",
     "build:watch": "tsup --watch",
     "dev": "bun run build:watch",
-    "pub:release": "bun run build && npm publish"
+    "pub:release": "bun run build && npm publish",
+    "test:types": "bun test tests/"
   },
   "devDependencies": {
     "@types/bun": "latest",
