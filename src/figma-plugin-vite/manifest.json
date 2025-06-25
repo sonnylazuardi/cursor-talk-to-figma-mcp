@@ -1,0 +1,13 @@
+{
+  "name": "Figma Plugin Vite React Boilerplate",
+  "id": "1337817355832247687",
+  "api": "1.0.0",
+  "main": "index.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": ["figma"],
+  "ui": "index.html",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

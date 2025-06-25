@@ -90,6 +90,109 @@ export interface TextReplaceResult {
   }>;
 }
 
+// === Individual Parameter Types ===
+export interface RGBAColor {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+}
+
+export interface GetNodeInfoParams {
+  nodeId: string;
+}
+
+export interface GetNodesInfoParams {
+  nodeIds: string[];
+}
+
+export interface CreateRectangleParams {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  name?: string;
+  parentId?: string;
+}
+
+export interface CreateFrameParams {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  name?: string;
+  parentId?: string;
+  fillColor?: RGBAColor;
+  strokeColor?: RGBAColor;
+  strokeWeight?: number;
+  layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+  layoutWrap?: 'NO_WRAP' | 'WRAP';
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
+  primaryAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
+  counterAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
+  layoutSizingHorizontal?: 'FIXED' | 'HUG' | 'FILL';
+  layoutSizingVertical?: 'FIXED' | 'HUG' | 'FILL';
+  itemSpacing?: number;
+}
+
+export interface CreateTextParams {
+  x: number;
+  y: number;
+  text: string;
+  fontSize?: number;
+  fontWeight?: number;
+  fontColor?: RGBAColor;
+  name?: string;
+  parentId?: string;
+}
+
+export interface SetFillColorParams {
+  nodeId: string;
+  color: RGBAColor;
+}
+
+export interface SetStrokeColorParams {
+  nodeId: string;
+  color: RGBAColor;
+  weight?: number;
+}
+
+export interface MoveNodeParams {
+  nodeId: string;
+  x: number;
+  y: number;
+}
+
+export interface ResizeNodeParams {
+  nodeId: string;
+  width: number;
+  height: number;
+}
+
+export interface CloneNodeParams {
+  nodeId: string;
+  x?: number;
+  y?: number;
+}
+
+export interface DeleteNodeParams {
+  nodeId: string;
+}
+
+export interface DeleteMultipleNodesParams {
+  nodeIds: string[];
+}
+
+export interface SetCornerRadiusParams {
+  nodeId: string;
+  radius: number;
+  corners?: boolean[];
+}
+
+// === Command Types ===
 export type FigmaCommand =
   | "get_document_info"
   | "get_selection"
@@ -133,62 +236,17 @@ export type FigmaCommand =
 export type CommandParams = {
   get_document_info: Record<string, never>;
   get_selection: Record<string, never>;
-  get_node_info: { nodeId: string };
-  get_nodes_info: { nodeIds: string[] };
-  create_rectangle: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    name?: string;
-    parentId?: string;
-  };
-  create_frame: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    name?: string;
-    parentId?: string;
-    fillColor?: { r: number; g: number; b: number; a?: number };
-    strokeColor?: { r: number; g: number; b: number; a?: number };
-    strokeWeight?: number;
-  };
-  create_text: {
-    x: number;
-    y: number;
-    text: string;
-    fontSize?: number;
-    fontWeight?: number;
-    fontColor?: { r: number; g: number; b: number; a?: number };
-    name?: string;
-    parentId?: string;
-  };
-  set_fill_color: {
-    nodeId: string;
-    color: { r: number; g: number; b: number; a?: number };
-  };
-  set_stroke_color: {
-    nodeId: string;
-    color: { r: number; g: number; b: number; a?: number };
-    weight?: number;
-  };
-  move_node: {
-    nodeId: string;
-    x: number;
-    y: number;
-  };
-  resize_node: {
-    nodeId: string;
-    width: number;
-    height: number;
-  };
-  delete_node: {
-    nodeId: string;
-  };
-  delete_multiple_nodes: {
-    nodeIds: string[];
-  };
+  get_node_info: GetNodeInfoParams;
+  get_nodes_info: GetNodesInfoParams;
+  create_rectangle: CreateRectangleParams;
+  create_frame: CreateFrameParams;
+  create_text: CreateTextParams;
+  set_fill_color: SetFillColorParams;
+  set_stroke_color: SetStrokeColorParams;
+  move_node: MoveNodeParams;
+  resize_node: ResizeNodeParams;
+  delete_node: DeleteNodeParams;
+  delete_multiple_nodes: DeleteMultipleNodesParams;
   get_styles: Record<string, never>;
   get_local_components: Record<string, never>;
   get_team_components: Record<string, never>;
@@ -215,16 +273,8 @@ export type CommandParams = {
   join: {
     channel: string;
   };
-  set_corner_radius: {
-    nodeId: string;
-    radius: number;
-    corners?: boolean[];
-  };
-  clone_node: {
-    nodeId: string;
-    x?: number;
-    y?: number;
-  };
+  set_corner_radius: SetCornerRadiusParams;
+  clone_node: CloneNodeParams;
   set_text_content: {
     nodeId: string;
     text: string;
@@ -265,6 +315,33 @@ export type CommandParams = {
       text?: string;
     }>;
   };
+  read_my_design: Record<string, never>;
+  set_layout_mode: {
+    nodeId: string;
+    layoutMode: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+    layoutWrap?: 'NO_WRAP' | 'WRAP';
+  };
+  set_padding: {
+    nodeId: string;
+    paddingTop?: number;
+    paddingRight?: number;
+    paddingBottom?: number;
+    paddingLeft?: number;
+  };
+  set_axis_align: {
+    nodeId: string;
+    primaryAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
+    counterAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
+  };
+  set_layout_sizing: {
+    nodeId: string;
+    layoutSizingHorizontal?: 'FIXED' | 'HUG' | 'FILL';
+    layoutSizingVertical?: 'FIXED' | 'HUG' | 'FILL';
+  };
+  set_item_spacing: {
+    nodeId: string;
+    itemSpacing: number;
+  };
 };
 
 export interface ProgressMessage {
@@ -274,15 +351,6 @@ export interface ProgressMessage {
   [key: string]: any; // Allow any other properties
 }
 
-// Color type for consistency
-export interface RGBAColor {
-  r: number;
-  g: number;
-  b: number;
-  a?: number;
-}
-
-// Node information types
 export interface NodeInfo {
   id: string;
   name: string;
@@ -294,7 +362,6 @@ export interface NodeInfo {
   height?: number;
 }
 
-// Plugin state interface
 export interface PluginState {
   serverPort: number;
 } 
