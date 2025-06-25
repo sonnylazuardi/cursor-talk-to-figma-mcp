@@ -4,12 +4,20 @@
     "args": ["-l"]
   },
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "terminal.integrated.shellIntegration.enabled": false,
+  "terminal.integrated.shellIntegration.enabled": true,
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.profiles.osx": {
     "zsh": {
       "path": "/bin/zsh",
-      "args": ["-l"]
+      "args": ["-l"],
+      "env": {
+        "BUN_INSTALL": "${env:HOME}/.bun",
+        "PATH": "${env:HOME}/.bun/bin:${env:PATH}"
+      }
     }
+  },
+  "terminal.integrated.env.osx": {
+    "BUN_INSTALL": "${env:HOME}/.bun",
+    "PATH": "${env:HOME}/.bun/bin:${env:PATH}"
   }
 } 

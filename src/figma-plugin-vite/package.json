@@ -5,13 +5,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "bun run build --watch",
-    "build": "bunx --bun vite build",
+    "dev": "echo '🔥 Hot reload enabled! Remember to manually reload plugin in Figma after changes.' && bunx --bun vite build --watch",
+    "dev:ui": "bunx --bun vite serve",
+    "build": "bunx vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
     "@svgr/core": "^8.1.0",
     "@types/node": "^20.11.17",
+    "antd": "^5.26.2",
     "concurrently": "^8.2.2",
     "path": "^0.12.7",
     "react": "^18.2.0",

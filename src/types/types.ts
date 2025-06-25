@@ -98,96 +98,107 @@ export interface RGBAColor {
   a?: number;
 }
 
-export interface GetNodeInfoParams {
+// === Common Base Types ===
+export interface BaseNodeParams {
   nodeId: string;
 }
+
+export interface BasePositionParams {
+  x: number;
+  y: number;
+}
+
+export interface BaseSizeParams {
+  width: number;
+  height: number;
+}
+
+export interface BaseCreationParams extends BasePositionParams, BaseSizeParams {
+  name?: string;
+  parentId?: string;
+}
+
+// === Layout Enums and Types ===
+export type LayoutMode = 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+export type LayoutWrap = 'NO_WRAP' | 'WRAP';
+export type PrimaryAxisAlign = 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
+export type CounterAxisAlign = 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
+export type LayoutSizing = 'FIXED' | 'HUG' | 'FILL';
+
+// === Padding Types ===
+export interface PaddingParams {
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
+}
+
+// === Auto Layout Types ===
+export interface AutoLayoutParams extends PaddingParams {
+  layoutMode?: LayoutMode;
+  layoutWrap?: LayoutWrap;
+  primaryAxisAlignItems?: PrimaryAxisAlign;
+  counterAxisAlignItems?: CounterAxisAlign;
+  layoutSizingHorizontal?: LayoutSizing;
+  layoutSizingVertical?: LayoutSizing;
+  itemSpacing?: number;
+}
+
+// === Style Types ===
+export interface StyleParams {
+  fillColor?: RGBAColor;
+  strokeColor?: RGBAColor;
+  strokeWeight?: number;
+}
+
+// === Font Types ===
+export interface FontParams {
+  fontSize?: number;
+  fontWeight?: number;
+  fontColor?: RGBAColor;
+}
+
+export interface GetNodeInfoParams extends BaseNodeParams {}
 
 export interface GetNodesInfoParams {
   nodeIds: string[];
 }
 
-export interface CreateRectangleParams {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  name?: string;
-  parentId?: string;
-}
+export interface CreateRectangleParams extends BaseCreationParams {}
 
-export interface CreateFrameParams {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  name?: string;
-  parentId?: string;
-  fillColor?: RGBAColor;
-  strokeColor?: RGBAColor;
-  strokeWeight?: number;
-  layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
-  layoutWrap?: 'NO_WRAP' | 'WRAP';
-  paddingTop?: number;
-  paddingRight?: number;
-  paddingBottom?: number;
-  paddingLeft?: number;
-  primaryAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
-  counterAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
-  layoutSizingHorizontal?: 'FIXED' | 'HUG' | 'FILL';
-  layoutSizingVertical?: 'FIXED' | 'HUG' | 'FILL';
-  itemSpacing?: number;
-}
+export interface CreateFrameParams extends BaseCreationParams, StyleParams, AutoLayoutParams {}
 
-export interface CreateTextParams {
-  x: number;
-  y: number;
+export interface CreateTextParams extends BasePositionParams, FontParams {
   text: string;
-  fontSize?: number;
-  fontWeight?: number;
-  fontColor?: RGBAColor;
   name?: string;
   parentId?: string;
 }
 
-export interface SetFillColorParams {
-  nodeId: string;
+export interface SetFillColorParams extends BaseNodeParams {
   color: RGBAColor;
 }
 
-export interface SetStrokeColorParams {
-  nodeId: string;
+export interface SetStrokeColorParams extends BaseNodeParams {
   color: RGBAColor;
   weight?: number;
 }
 
-export interface MoveNodeParams {
-  nodeId: string;
-  x: number;
-  y: number;
-}
+export interface MoveNodeParams extends BaseNodeParams, BasePositionParams {}
 
-export interface ResizeNodeParams {
-  nodeId: string;
-  width: number;
-  height: number;
-}
+export interface ResizeNodeParams extends BaseNodeParams, BaseSizeParams {}
 
-export interface CloneNodeParams {
-  nodeId: string;
+export interface CloneNodeParams extends BaseNodeParams {
   x?: number;
   y?: number;
 }
 
-export interface DeleteNodeParams {
-  nodeId: string;
-}
+export interface DeleteNodeParams extends BaseNodeParams {}
 
 export interface DeleteMultipleNodesParams {
   nodeIds: string[];
 }
 
-export interface SetCornerRadiusParams {
-  nodeId: string;
+export interface SetCornerRadiusParams extends BaseNodeParams {
   radius: number;
   corners?: boolean[];
 }
@@ -275,19 +286,9 @@ export type CommandParams = {
   };
   set_corner_radius: SetCornerRadiusParams;
   clone_node: CloneNodeParams;
-  set_text_content: {
-    nodeId: string;
-    text: string;
-  };
-  scan_text_nodes: {
-    nodeId: string;
-    useChunking: boolean;
-    chunkSize: number;
-  };
-  set_multiple_text_contents: {
-    nodeId: string;
-    text: Array<{ nodeId: string; text: string }>;
-  };
+  set_text_content: SetTextContentParams;
+  scan_text_nodes: ScanTextNodesParams;
+  set_multiple_text_contents: SetMultipleTextContentsParams;
   get_annotations: {
     nodeId?: string;
     includeCategories?: boolean;
@@ -316,32 +317,11 @@ export type CommandParams = {
     }>;
   };
   read_my_design: Record<string, never>;
-  set_layout_mode: {
-    nodeId: string;
-    layoutMode: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
-    layoutWrap?: 'NO_WRAP' | 'WRAP';
-  };
-  set_padding: {
-    nodeId: string;
-    paddingTop?: number;
-    paddingRight?: number;
-    paddingBottom?: number;
-    paddingLeft?: number;
-  };
-  set_axis_align: {
-    nodeId: string;
-    primaryAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
-    counterAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
-  };
-  set_layout_sizing: {
-    nodeId: string;
-    layoutSizingHorizontal?: 'FIXED' | 'HUG' | 'FILL';
-    layoutSizingVertical?: 'FIXED' | 'HUG' | 'FILL';
-  };
-  set_item_spacing: {
-    nodeId: string;
-    itemSpacing: number;
-  };
+  set_layout_mode: SetLayoutModeParams;
+  set_padding: SetPaddingParams;
+  set_axis_align: SetAxisAlignParams;
+  set_layout_sizing: SetLayoutSizingParams;
+  set_item_spacing: SetItemSpacingParams;
 };
 
 export interface ProgressMessage {
@@ -364,4 +344,158 @@ export interface NodeInfo {
 
 export interface PluginState {
   serverPort: number;
+}
+
+// === Prototyping Types ===
+export interface ReactionNode {
+  id: string;
+  name: string;
+  type: string;
+  depth: number;
+  hasReactions: boolean;
+  reactions: unknown[];
+  path: string;
+}
+
+export interface GetReactionsResult {
+  nodesCount: number;
+  nodesWithReactions: number;
+  nodes: ReactionNode[];
+}
+
+export interface SetDefaultConnectorResult {
+  success: boolean;
+  message: string;
+  connectorId: string;
+  exists?: boolean;
+  autoSelected?: boolean;
+}
+
+export interface ConnectionResult {
+  id?: string;
+  startNodeId: string;
+  endNodeId: string;
+  text?: string;
+  error?: string;
+}
+
+export interface CreateConnectionsResult {
+  success: boolean;
+  count: number;
+  connections: ConnectionResult[];
+}
+
+// === Text Content Types ===
+export interface SetTextContentParams extends BaseNodeParams {
+  text: string;
+}
+
+export interface ScanTextNodesParams extends BaseNodeParams {
+  useChunking?: boolean;
+  chunkSize?: number;
+  commandId?: string;
+}
+
+export interface SetMultipleTextContentsParams extends BaseNodeParams {
+  text: Array<{ nodeId: string; text: string }>;
+  commandId?: string;
+}
+
+export interface TextNodeInfo {
+  id: string;
+  name: string;
+  characters: string;
+  fontName: any;
+  fontSize: number;
+  depth: number;
+  path: string;
+  visible: boolean;
+  locked: boolean;
+}
+
+export interface ScanTextNodesResult {
+  success: boolean;
+  message: string;
+  count: number;
+  textNodes: TextNodeInfo[];
+  commandId: string;
+  totalNodes?: number;
+  processedNodes?: number;
+  chunks?: number;
+}
+
+// === Layout Types ===
+export interface SetLayoutModeParams extends BaseNodeParams {
+  layoutMode: LayoutMode;
+  layoutWrap?: LayoutWrap;
+}
+
+export interface SetPaddingParams extends BaseNodeParams, PaddingParams {}
+
+export interface SetAxisAlignParams extends BaseNodeParams {
+  primaryAxisAlignItems?: PrimaryAxisAlign;
+  counterAxisAlignItems?: CounterAxisAlign;
+}
+
+export interface SetLayoutSizingParams extends BaseNodeParams {
+  layoutSizingHorizontal?: LayoutSizing;
+  layoutSizingVertical?: LayoutSizing;
+}
+
+export interface SetItemSpacingParams extends BaseNodeParams {
+  itemSpacing: number;
+}
+
+// === Additional Missing Types ===
+
+// Styling Types
+export interface SetCornerRadiusParams extends BaseNodeParams {
+  radius: number;
+  corners?: boolean[];
+}
+
+// Component Types
+export interface CreateComponentInstanceParams extends BasePositionParams {
+  componentKey: string;
+}
+
+export interface GetInstanceOverridesParams {
+  nodeId?: string;
+}
+
+export interface SetInstanceOverridesParams {
+  sourceInstanceId: string;
+  targetNodeIds: string[];
+}
+
+// Export Types
+export type ExportFormat = 'PNG' | 'JPG' | 'SVG' | 'PDF';
+
+export interface ExportNodeParams extends BaseNodeParams {
+  format?: ExportFormat;
+  scale?: number;
+}
+
+// Style & Component Result Types
+export interface StyleInfo {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+}
+
+export interface ComponentInfo {
+  id: string;
+  name: string;
+  description?: string;
+  key: string;
+}
+
+export interface ExportResult {
+  success: boolean;
+  nodeId: string;
+  format: ExportFormat;
+  scale: number;
+  data?: string; // base64 data
+  error?: string;
 } 
