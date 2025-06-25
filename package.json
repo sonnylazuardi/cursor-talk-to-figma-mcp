@@ -16,9 +16,11 @@
     "start": "bun run dist/server.js",
     "socket": "bun run src/socket.ts",
     "setup": "./scripts/setup.sh",
-    "build": "tsup",
+    "build": "tsup && bun run build:figma-plugin",
     "build:watch": "tsup --watch",
+    "build:figma-plugin": "cd src/figma-plugin && npm run build",
     "dev": "bun run build:watch",
+    "dev:figma-plugin": "cd src/figma-plugin && npm run dev",
     "pub:release": "bun run build && npm publish",
     "test:types": "bun test tests/"
   },

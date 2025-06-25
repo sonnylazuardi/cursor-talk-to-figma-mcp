@@ -1,0 +1,41 @@
+{
+  "name": "designmate",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "bun run build --watch",
+    "build": "bunx --bun vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@svgr/core": "^8.1.0",
+    "@types/node": "^20.11.17",
+    "concurrently": "^8.2.2",
+    "path": "^0.12.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.114.0",
+    "@rollup/pluginutils": "^5.1.0",
+    "@types/bun": "latest",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "sass": "^1.70.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.0",
+    "vite-plugin-react-rich-svg": "^1.1.0",
+    "vite-plugin-singlefile": "^1.0.0",
+    "vite-plugin-static-copy": "^1.0.1"
+  },
+  "module": "index.ts"
+}
