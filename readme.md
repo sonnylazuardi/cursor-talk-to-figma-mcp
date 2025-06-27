@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/129a14d2-ed73-470f-9a4c-2240b2a4885c
 ## Project Structure
 
 - `src/talk_to_figma_mcp/` - TypeScript MCP server for Figma integration
-- `src/cursor_mcp_plugin/` - Figma plugin for communicating with Cursor
+- `src/figma-plugin/` - TypeScript-based Figma plugin with modern UI and comprehensive features
 - `src/socket.ts` - WebSocket server that facilitates communication between the MCP server and Figma plugin
 
 ## Get Started
@@ -42,7 +42,7 @@ bunx cursor-talk-to-figma-mcp
 
 [Video Link](https://www.linkedin.com/posts/sonnylazuardi_just-wanted-to-share-my-latest-experiment-activity-7307821553654657024-yrh8)
 
-## Design Automation Example
+## Design Automation Examples
 
 **Bulk text content replacement**
 
@@ -77,11 +77,11 @@ Start the WebSocket server:
 bun socket
 ```
 
-### Figma Plugin
+### Local Figma Plugin Installation
 
 1. In Figma, go to Plugins > Development > New Plugin
 2. Choose "Link existing plugin"
-3. Select the `src/cursor_mcp_plugin/manifest.json` file
+3. Select the `src/figma-plugin/manifest.json` file
 4. The plugin should now be available in your Figma development plugins
 
 ## Windows + WSL Guide
@@ -156,7 +156,10 @@ The MCP server provides the following tools for interacting with Figma:
 - `set_padding` - Set padding values for an auto-layout frame (top, right, bottom, left)
 - `set_axis_align` - Set primary and counter axis alignment for auto-layout frames
 - `set_layout_sizing` - Set horizontal and vertical sizing modes for auto-layout frames (FIXED, HUG, FILL)
-- `set_item_spacing` - Set distance between children in an auto-layout frame
+- `set_item_spacing` - **NEW**: Set both item spacing and counter axis spacing for comprehensive layout control
+  - `itemSpacing` - Distance between children in the same row/column
+  - `counterAxisSpacing` - Distance between rows (horizontal layout) or columns (vertical layout)
+  - Perfect for wrap layouts with proper spacing control
 
 ### Styling
 
