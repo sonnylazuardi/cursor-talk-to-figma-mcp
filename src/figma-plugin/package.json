@@ -1,10 +1,10 @@
 {
-  "name": "talk-to-figma-mcp-plugin",
+  "name": "cursor-mcp-plugin",
   "version": "1.0.0",
   "license": "MIT",
   "author": {
-    "name": "Talk to Figma MCP",
-    "url": "https://github.com/cursor-talk-to-figma-mcp"
+    "name": "Cursor MCP Plugin",
+    "url": "https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp"
   },
   "scripts": {
     "build": "webpack --mode=production",

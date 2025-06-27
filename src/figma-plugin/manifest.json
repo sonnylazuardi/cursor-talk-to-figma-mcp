@@ -1,15 +1,16 @@
 {
-  "name": "Talk to Figma MCP - Annotation Plugin",
-  "id": "1337817355832247687",
+  "name": "Cursor MCP Plugin",
+  "id": "cursor-mcp-plugin",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "documentAccess": "dynamic-page",
   "capabilities": ["inspect"],
-  "enableProposedApi": false,
-  "editorType": ["figma", "dev"],
+  "enableProposedApi": true,
+  "enablePrivatePluginApi": true,
+  "editorType": ["figma", "figjam", "dev"],
   "networkAccess": {
-    "allowedDomains": ["none"],
+    "allowedDomains": ["https://google.com"],
     "devAllowedDomains": [
       "http://localhost:3055",
       "ws://localhost:3055"
