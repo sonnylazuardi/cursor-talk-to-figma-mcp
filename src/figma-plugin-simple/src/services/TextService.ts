@@ -8,12 +8,13 @@ import {
   TextReplaceResult,
 } from "../types";
 import {
-  sendProgressUpdate,
   generateCommandId,
   getNodePath,
   highlightNodeWithFill,
   delay,
   setCharacters,
+  withProgress,
+  withChunkedProgress,
 } from "../utils/common";
 
 export class TextService {
@@ -63,63 +64,26 @@ export class TextService {
   async scanTextNodes(
     params: ScanTextNodesParams
   ): Promise<ScanTextNodesResult> {
-    console.log(`Starting to scan text nodes from node ID: ${params.nodeId}`);
-    const {
-      nodeId,
-      useChunking = true,
-      chunkSize = 10,
-      commandId = generateCommandId(),
-    } = params;
-
+    const { nodeId, chunkSize = 0, commandId = generateCommandId() } = params;
     const node = await figma.getNodeByIdAsync(nodeId);
 
     if (!node) {
-      console.error(`Node with ID ${nodeId} not found`);
-      // Send error progress update
-      sendProgressUpdate(
-        commandId,
-        "scan_text_nodes",
-        "error",
-        0,
-        0,
-        0,
-        `Node with ID ${nodeId} not found`,
-        { error: `Node not found: ${nodeId}` }
-      );
-      throw new Error(`Node with ID ${nodeId} not found`);
+      throw new Error(`Node with id ${nodeId} not found`);
     }
 
-    // If chunking is not enabled, use the original implementation
-    if (!useChunking) {
+    // 🚀 NEW: Non-chunked processing - using withProgress
+    if (chunkSize <= 0) {
+      return await withProgress(
+        commandId,
+        "scan_text_nodes",
+        `Starting scan of node "${node.name || nodeId}" without chunking`,
+        "Scan completed successfully",
+        async (_tracker) => {
       const textNodes: TextNodeInfo[] = [];
-      try {
-        // Send started progress update
-        sendProgressUpdate(
-          commandId,
-          "scan_text_nodes",
-          "started",
-          0,
-          1, // Not known yet how many nodes there are
-          0,
-          `Starting scan of node "${node.name || nodeId}" without chunking`,
-          null
-        );
 
         if ("children" in node || node.type === "TEXT") {
           await this.findTextNodes(node as SceneNode, [], 0, textNodes);
         }
-
-        // Send completed progress update
-        sendProgressUpdate(
-          commandId,
-          "scan_text_nodes",
-          "completed",
-          100,
-          textNodes.length,
-          textNodes.length,
-          `Scan complete. Found ${textNodes.length} text nodes.`,
-          { textNodes }
-        );
 
         return {
           success: true,
@@ -128,118 +92,41 @@ export class TextService {
           textNodes: textNodes,
           commandId,
         };
-      } catch (error) {
-        console.error("Error scanning text nodes:", error);
-
-        // Send error progress update
-        sendProgressUpdate(
-          commandId,
-          "scan_text_nodes",
-          "error",
-          0,
-          0,
-          0,
-          `Error scanning text nodes: ${(error as Error).message}`,
-          { error: (error as Error).message }
-        );
-
-        throw new Error(
-          `Error scanning text nodes: ${(error as Error).message}`
-        );
-      }
+        }
+      );
     }
 
-    // Chunked implementation
+    // 🚀 NEW: Chunked processing - using withChunkedProgress
     console.log(`Using chunked scanning with chunk size: ${chunkSize}`);
 
-    // First, collect all nodes to process (without processing them yet)
+    // First, collect nodes to process
     const nodesToProcess: Array<{
       node: SceneNode;
       parentPath: string[];
       depth: number;
     }> = [];
 
-    // Send started progress update
-    sendProgressUpdate(
-      commandId,
-      "scan_text_nodes",
-      "started",
-      0,
-      0, // Not known yet how many nodes there are
-      0,
-      `Starting chunked scan of node "${node.name || nodeId}"`,
-      { chunkSize }
-    );
-
     if ("children" in node || node.type === "TEXT") {
-      await this.collectNodesToProcess(
-        node as SceneNode,
-        [],
-        0,
-        nodesToProcess
-      );
+      await this.collectNodesToProcess(node as SceneNode, [], 0, nodesToProcess);
     }
 
-    const totalNodes = nodesToProcess.length;
-    console.log(`Found ${totalNodes} total nodes to process`);
-
-    // Calculate number of chunks needed
-    const totalChunks = Math.ceil(totalNodes / chunkSize);
-    console.log(`Will process in ${totalChunks} chunks`);
-
-    // Send update after node collection
-    sendProgressUpdate(
+    // Process with chunked progress tracking
+    const allTextNodes = await withChunkedProgress(
       commandId,
       "scan_text_nodes",
-      "in_progress",
-      5, // 5% progress for collection phase
-      totalNodes,
-      0,
-      `Found ${totalNodes} nodes to scan. Will process in ${totalChunks} chunks.`,
-      {
-        totalNodes,
-        totalChunks,
+      nodesToProcess,
         chunkSize,
-      }
-    );
-
-    // Process nodes in chunks
-    const allTextNodes: TextNodeInfo[] = [];
-    let processedNodes = 0;
-    let chunksProcessed = 0;
-
-    for (let i = 0; i < totalNodes; i += chunkSize) {
-      const chunkEnd = Math.min(i + chunkSize, totalNodes);
-      console.log(
-        `Processing chunk ${
-          chunksProcessed + 1
-        }/${totalChunks} (nodes ${i} to ${chunkEnd - 1})`
-      );
-
-      // Send update before processing chunk
-      sendProgressUpdate(
-        commandId,
-        "scan_text_nodes",
-        "in_progress",
-        Math.round(5 + (chunksProcessed / totalChunks) * 90), // 5-95% for processing
-        totalNodes,
-        processedNodes,
-        `Processing chunk ${chunksProcessed + 1}/${totalChunks}`,
-        {
-          currentChunk: chunksProcessed + 1,
-          totalChunks,
-          textNodesFound: allTextNodes.length,
-        }
-      );
-
-      const chunkNodes = nodesToProcess.slice(i, chunkEnd);
+      `Starting chunked scan of node "${node.name || nodeId}"`,
+      "Chunked scan completed successfully",
+      async (chunk, chunkIndex, totalChunks, _tracker) => {
+        console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}`);
+        
       const chunkTextNodes: TextNodeInfo[] = [];
 
-      // Process each node in this chunk
-      for (const nodeInfo of chunkNodes) {
+        // Process each node in the chunk
+        for (const nodeInfo of chunk) {
         if (nodeInfo.node.type === "TEXT") {
           try {
-            // Highlight the text node to show it's being processed
             await highlightNodeWithFill(nodeInfo.node, 100);
             
             const textNodeInfo = await this.processTextNode(
@@ -251,73 +138,23 @@ export class TextService {
               chunkTextNodes.push(textNodeInfo);
             }
           } catch (error) {
-            console.error(
-              `Error processing text node: ${(error as Error).message}`
-            );
-            // Continue with other nodes
+              console.error(`Error processing text node: ${(error as Error).message}`);
           }
         }
 
-        // Brief delay to allow UI updates and prevent freezing
-        await delay(5);
-      }
-
-      // Add results from this chunk
-      for (const textNode of chunkTextNodes) {
-        allTextNodes.push(textNode);
-      }
-      processedNodes += chunkNodes.length;
-      chunksProcessed++;
-
-      // Send update after processing chunk
-      sendProgressUpdate(
-        commandId,
-        "scan_text_nodes",
-        "in_progress",
-        Math.round(5 + (chunksProcessed / totalChunks) * 90), // 5-95% for processing
-        totalNodes,
-        processedNodes,
-        `Processed chunk ${chunksProcessed}/${totalChunks}. Found ${allTextNodes.length} text nodes so far.`,
-        {
-          currentChunk: chunksProcessed,
-          totalChunks,
-          processedNodes,
-          textNodesFound: allTextNodes.length,
-          chunkResult: chunkTextNodes,
+          await delay(5); // Short delay for UI updates
         }
-      );
-
-      // Small delay between chunks to prevent UI freezing
-      if (i + chunkSize < totalNodes) {
-        await delay(50);
-      }
-    }
-
-    // Send completed progress update
-    sendProgressUpdate(
-      commandId,
-      "scan_text_nodes",
-      "completed",
-      100,
-      totalNodes,
-      processedNodes,
-      `Scan complete. Found ${allTextNodes.length} text nodes.`,
-      {
-        textNodes: allTextNodes,
-        processedNodes,
-        chunks: chunksProcessed,
-      }
-    );
+        
+        return chunkTextNodes;
+        }
+    ) as TextNodeInfo[];
 
     return {
       success: true,
-      message: `Chunked scan complete. Found ${allTextNodes.length} text nodes.`,
+      message: `Scanned ${allTextNodes.length} text nodes using chunked processing.`,
       count: allTextNodes.length,
       textNodes: allTextNodes,
       commandId,
-      totalNodes: processedNodes,
-      processedNodes: processedNodes,
-      chunks: chunksProcessed,
     };
   }
 
@@ -325,107 +162,24 @@ export class TextService {
     params: SetMultipleTextContentsParams
   ): Promise<TextReplaceResult> {
     const { nodeId, text } = params;
-    const commandId = params.commandId || generateCommandId();
 
     if (!nodeId || !text || !Array.isArray(text)) {
-      const errorMsg = "Missing required parameters: nodeId and text array";
-
-      // Send error progress update
-      sendProgressUpdate(
-        commandId,
-        "set_multiple_text_contents",
-        "error",
-        0,
-        0,
-        0,
-        errorMsg,
-        { error: errorMsg }
-      );
-
-      throw new Error(errorMsg);
+      throw new Error("Missing required parameters: nodeId and text array");
     }
 
     console.log(
       `Starting text replacement for node: ${nodeId} with ${text.length} text replacements`
     );
 
-    // Send started progress update
-    sendProgressUpdate(
-      commandId,
+    // Use chunked progress for replacing multiple text contents
+    const results = await withChunkedProgress(
+      generateCommandId(),
       "set_multiple_text_contents",
-      "started",
-      0,
-      text.length,
-      0,
+      text,
+      5, // Process 5 text replacements per chunk
       `Starting text replacement for ${text.length} nodes`,
-      { totalReplacements: text.length }
-    );
-
-    // Define the results array and counters
-    const results: Array<{
-      success: boolean;
-      nodeId: string;
-      error?: string;
-      originalText?: string;
-      translatedText?: string;
-    }> = [];
-    let successCount = 0;
-    let failureCount = 0;
-
-    // Split text replacements into chunks of 5
-    const CHUNK_SIZE = 5;
-    const chunks: Array<Array<{ nodeId: string; text: string }>> = [];
-
-    for (let i = 0; i < text.length; i += CHUNK_SIZE) {
-      chunks.push(text.slice(i, i + CHUNK_SIZE));
-    }
-
-    console.log(
-      `Split ${text.length} replacements into ${chunks.length} chunks`
-    );
-
-    // Send chunking info update
-    sendProgressUpdate(
-      commandId,
-      "set_multiple_text_contents",
-      "in_progress",
-      5, // 5% progress for planning phase
-      text.length,
-      0,
-      `Preparing to replace text in ${text.length} nodes using ${chunks.length} chunks`,
-      {
-        totalReplacements: text.length,
-        chunks: chunks.length,
-        chunkSize: CHUNK_SIZE,
-      }
-    );
-
-    // Process each chunk sequentially
-    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-      const chunk = chunks[chunkIndex];
-      console.log(
-        `Processing chunk ${chunkIndex + 1}/${chunks.length} with ${
-          chunk.length
-        } replacements`
-      );
-
-      // Send chunk processing start update
-      sendProgressUpdate(
-        commandId,
-        "set_multiple_text_contents",
-        "in_progress",
-        Math.round(5 + (chunkIndex / chunks.length) * 90), // 5-95% for processing
-        text.length,
-        successCount + failureCount,
-        `Processing text replacements chunk ${chunkIndex + 1}/${chunks.length}`,
-        {
-          currentChunk: chunkIndex + 1,
-          totalChunks: chunks.length,
-          successCount,
-          failureCount,
-        }
-      );
-
+      "Completed text replacement",
+             async (chunk, _chunkIndex, _totalChunks, _tracker) => {
       // Process replacements within a chunk in parallel
       const chunkPromises = chunk.map(async (replacement) => {
         if (!replacement.nodeId || replacement.text === undefined) {
@@ -508,80 +262,29 @@ export class TextService {
       });
 
       // Wait for all replacements in this chunk to complete
-      const chunkResults = await Promise.all(chunkPromises);
-
-      // Process results for this chunk
-      chunkResults.forEach((result) => {
-        if (result.success) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-        results.push(result);
-      });
-
-      // Send chunk processing complete update with partial results
-      sendProgressUpdate(
-        commandId,
-        "set_multiple_text_contents",
-        "in_progress",
-        Math.round(5 + ((chunkIndex + 1) / chunks.length) * 90), // 5-95% for processing
-        text.length,
-        successCount + failureCount,
-        `Completed chunk ${chunkIndex + 1}/${
-          chunks.length
-        }. ${successCount} successful, ${failureCount} failed so far.`,
-        {
-          currentChunk: chunkIndex + 1,
-          totalChunks: chunks.length,
-          successCount,
-          failureCount,
-          chunkResults: chunkResults,
-        }
-      );
-
-      // Add a small delay between chunks to avoid overloading Figma
-      if (chunkIndex < chunks.length - 1) {
-        console.log("Pausing between chunks to avoid overloading Figma...");
-        await delay(1000); // 1 second delay between chunks
+        const chunkProcessResults = await Promise.all(chunkPromises);
+        return chunkProcessResults;
       }
-    }
-
-    console.log(
-      `Replacement complete: ${successCount} successful, ${failureCount} failed`
     );
 
-    // Send completed progress update
-    sendProgressUpdate(
-      commandId,
-      "set_multiple_text_contents",
-      "completed",
-      100,
-      text.length,
-      successCount + failureCount,
-      `Text replacement complete: ${successCount} successful, ${failureCount} failed`,
-      {
-        totalReplacements: text.length,
-        successCount,
-        failureCount,
-        results: results,
-      }
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    console.log(
+      `Text replacement completed. Success: ${successCount}, Failed: ${failureCount}`
     );
 
     return {
-      success: true,
+      success: successCount > 0,
       nodeId,
       replacementsApplied: successCount,
       replacementsFailed: failureCount,
       totalReplacements: text.length,
-      completedInChunks: chunks.length,
-      results: results,
+      results,
     };
   }
 
   // Helper methods
-
-
 
   private async collectNodesToProcess(
     node: SceneNode,
@@ -644,8 +347,6 @@ export class TextService {
       return null;
     }
   }
-
-
 
   private async findTextNodes(
     node: SceneNode,

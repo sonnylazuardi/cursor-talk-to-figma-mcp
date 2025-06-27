@@ -155,7 +155,7 @@ const ConnectionView: React.FC = () => {
         parent.postMessage({
           pluginMessage: {
             type: "execute-command",
-            id: data.id,
+            webSocketCommandId: data.id,
             command: data.command,
             params: data.params,
           },

@@ -4,7 +4,12 @@ import {
   AnnotationResult,
   CommandParams
 } from '../types';
-import { highlightNodeWithFill } from '../utils/common';
+import { 
+  highlightNodeWithFill, 
+  withChunkedProgress, 
+  generateCommandId,
+  delay 
+} from '../utils/common';
 
 export class AnnotationService {
   /**
@@ -236,14 +241,18 @@ export class AnnotationService {
       };
     }
 
-    const results: Array<{ success: boolean; nodeId: string; error?: string; annotationId?: string }> = [];
-    let successCount = 0;
-    let failureCount = 0;
+    // Use chunked progress for setting multiple annotations
+    const results = await withChunkedProgress(
+      generateCommandId(),
+      "set_multiple_annotations",
+      annotations,
+      5, // Process 5 annotations per chunk
+      `Starting to set ${annotations.length} annotations`,
+      "Completed setting annotations",
+      async (chunk, _chunkIndex, _totalChunks, _tracker) => {
+        const chunkResults: Array<{ success: boolean; nodeId: string; error?: string; annotationId?: string }> = [];
 
-    // Process annotations sequentially
-    for (let i = 0; i < annotations.length; i++) {
-      const annotation = annotations[i];
-
+        for (const annotation of chunk) {
       try {
         // Highlight the node before setting annotation
         const node = await figma.getNodeByIdAsync(annotation.nodeId);
@@ -260,26 +269,33 @@ export class AnnotationService {
 
         const typedResult = result as { success: boolean; error?: string };
         if (typedResult.success) {
-          successCount++;
-          results.push({ success: true, nodeId: annotation.nodeId });
+              chunkResults.push({ success: true, nodeId: annotation.nodeId });
         } else {
-          failureCount++;
-          results.push({
+              chunkResults.push({
             success: false,
             nodeId: annotation.nodeId,
             error: typedResult.error,
           });
         }
       } catch (error) {
-        failureCount++;
         const errorResult = {
           success: false,
           nodeId: annotation.nodeId,
           error: (error as Error).message,
         };
-        results.push(errorResult);
+            chunkResults.push(errorResult);
       }
-    }
+          
+          // Small delay between annotations
+          await delay(10);
+        }
+        
+        return chunkResults;
+      }
+    );
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
 
     return {
       success: successCount > 0,

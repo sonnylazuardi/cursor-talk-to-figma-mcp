@@ -28,6 +28,175 @@ export function sendProgressUpdate(
   console.log(`Progress update: ${status} - ${progress}% - ${message}`);
 }
 
+// 🚀 NEW: ProgressTracker class - Enhanced reusable progress tracking
+export class ProgressTracker {
+  private commandId: string;
+  private commandType: string;
+  private totalItems: number = 0;
+  private processedItems: number = 0;
+
+  constructor(commandId: string, commandType: string) {
+    this.commandId = commandId;
+    this.commandType = commandType;
+  }
+
+  // Start operation
+  start(message: string, totalItems: number = 0, payload?: unknown) {
+    this.totalItems = totalItems;
+    this.processedItems = 0;
+    sendProgressUpdate(
+      this.commandId,
+      this.commandType,
+      'started',
+      0,
+      this.totalItems,
+      this.processedItems,
+      message,
+      payload
+    );
+  }
+
+  // Update progress
+  update(processedItems: number, message: string, payload?: unknown) {
+    this.processedItems = processedItems;
+    const progress = this.totalItems > 0 ? Math.round((processedItems / this.totalItems) * 100) : 0;
+    sendProgressUpdate(
+      this.commandId,
+      this.commandType,
+      'in_progress',
+      progress,
+      this.totalItems,
+      this.processedItems,
+      message,
+      payload
+    );
+  }
+
+  // Update progress by percentage
+  updatePercent(percent: number, message: string, payload?: unknown) {
+    sendProgressUpdate(
+      this.commandId,
+      this.commandType,
+      'in_progress',
+      percent,
+      this.totalItems,
+      this.processedItems,
+      message,
+      payload
+    );
+  }
+
+  // Complete operation
+  complete(message: string, payload?: unknown) {
+    sendProgressUpdate(
+      this.commandId,
+      this.commandType,
+      'completed',
+      100,
+      this.totalItems,
+      this.totalItems,
+      message,
+      payload
+    );
+  }
+
+  // Handle error
+  error(message: string, error?: Error) {
+    sendProgressUpdate(
+      this.commandId,
+      this.commandType,
+      'error',
+      0,
+      this.totalItems,
+      this.processedItems,
+      message,
+      { error: error?.message || message }
+    );
+  }
+
+  // Update total items count (for dynamic changes)
+  setTotalItems(total: number) {
+    this.totalItems = total;
+  }
+
+  // Get current state
+  getState() {
+    return {
+      commandId: this.commandId,
+      commandType: this.commandType,
+      totalItems: this.totalItems,
+      processedItems: this.processedItems,
+      progress: this.totalItems > 0 ? Math.round((this.processedItems / this.totalItems) * 100) : 0
+    };
+  }
+}
+
+// 🚀 NEW: withProgress helper function - Automatic progress tracking
+export async function withProgress<T>(
+  commandId: string,
+  commandType: string,
+  startMessage: string,
+  completeMessage: string,
+  operation: (tracker: ProgressTracker) => Promise<T>
+): Promise<T> {
+  const tracker = new ProgressTracker(commandId, commandType);
+  
+  try {
+    tracker.start(startMessage);
+    const result = await operation(tracker);
+    tracker.complete(completeMessage, { result });
+    return result;
+  } catch (error) {
+    tracker.error(`Error in ${commandType}: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+    throw error;
+  }
+}
+
+// 🚀 NEW: withChunkedProgress helper function - For chunked operations
+export async function withChunkedProgress<T, R>(
+  commandId: string,
+  commandType: string,
+  items: T[],
+  chunkSize: number,
+  startMessage: string,
+  completeMessage: string,
+  processChunk: (chunk: T[], chunkIndex: number, totalChunks: number, tracker: ProgressTracker) => Promise<R[]>
+): Promise<R[]> {
+  const tracker = new ProgressTracker(commandId, commandType);
+  const totalChunks = Math.ceil(items.length / chunkSize);
+  const results: R[] = [];
+
+  try {
+    tracker.start(startMessage, items.length, { totalChunks, chunkSize });
+    
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, Math.min(i + chunkSize, items.length));
+      const chunkIndex = Math.floor(i / chunkSize);
+      
+      tracker.update(
+        i, 
+        `Processing chunk ${chunkIndex + 1}/${totalChunks}`,
+        { currentChunk: chunkIndex + 1, totalChunks }
+      );
+      
+      const chunkResults = await processChunk(chunk, chunkIndex, totalChunks, tracker);
+      results.push(...chunkResults);
+      
+      // Short delay between chunks
+      if (i + chunkSize < items.length) {
+        await delay(10);
+      }
+    }
+    
+    tracker.complete(completeMessage, { totalProcessed: results.length });
+    return results;
+    
+  } catch (error) {
+    tracker.error(`Error in chunked ${commandType}`, error as Error);
+    throw error;
+  }
+}
+
 export function generateCommandId(): string {
   return (
     "cmd_" +

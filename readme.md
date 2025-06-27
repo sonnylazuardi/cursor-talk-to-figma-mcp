@@ -199,6 +199,164 @@ The MCP server includes several helper prompts to guide you through complex desi
 - `swap_overrides_instances` - Strategy for transferring overrides between component instances in Figma
 - `reaction_to_connector_strategy` - Strategy for converting Figma prototype reactions to connector lines using the output of 'get_reactions', and guiding the use 'create_connections' in sequence
 
+## Communication Protocol
+
+The system consists of 4 main components that communicate with each other through standardized message formats:
+
+### Component Architecture
+
+```
+MCP Server ←→ WebSocket Server ←→ Plugin UI ←→ Figma Plugin
+    ↑                                              ↓
+ (Claude)                                   (Figma API)
+```
+
+**1. Figma Plugin** (`controller/index.ts`)
+- Executes Figma API operations directly
+- Handles both UI and WebSocket commands uniformly
+- Uses `webSocketCommandId` to distinguish command sources
+- Sends appropriate response format based on command origin
+
+**2. Plugin UI** (`App.tsx`)
+- Central message router and WebSocket command coordinator
+- Manages pending WebSocket commands with unique IDs
+- Forwards WebSocket commands to Plugin with `webSocketCommandId` marker
+- Routes responses back to appropriate destinations (UI or WebSocket)
+
+**3. WebSocket Server** (`socket.ts`)
+- Central message relay between MCP Server and Plugin UI
+- Handles channel management and message broadcasting
+- Maintains connection state and error handling
+
+**4. MCP Server** (`server.ts`)
+- Interface between Claude and WebSocket Server
+- Manages request/response correlation with unique IDs
+- Handles timeouts and error propagation
+
+### Improved Message Flow
+
+#### 1. **WebSocket Command Flow**
+```
+MCP Server → WebSocket → Plugin UI → Figma Plugin
+     ↓           ↓            ↓           ↓
+   Request   Broadcast   Store+Forward   Execute
+     ↑           ↑            ↑           ↑
+   Response   Relay Back   Route Back   Complete
+```
+
+**Step-by-step:**
+1. MCP Server sends: `{id: "abc123", command: "get_selection", params: {}}`
+2. WebSocket broadcasts to Plugin UI
+3. Plugin UI stores command and forwards: `{type: "get_selection", webSocketCommandId: "abc123", ...params}`
+4. Figma Plugin executes and responds: `{type: "command-result", id: "abc123", result: {...}}`
+5. Plugin UI routes response back to WebSocket
+6. WebSocket relays to MCP Server
+
+#### 2. **Direct UI Command Flow**
+```
+UI Button → Plugin UI → Figma Plugin
+    ↓          ↓           ↓
+  Click    Forward      Execute
+    ↑          ↑           ↑
+  Update   Display     Complete
+```
+
+**Step-by-step:**
+1. User clicks UI button
+2. Plugin UI sends: `{type: "get_selection", ...params}`
+3. Figma Plugin executes and responds: `{type: "command_result", command: "get_selection", result: {...}}`
+4. Plugin UI displays result
+
+### Key Improvements
+
+#### **🎯 Unified Command Processing**
+- Single `executeCommand()` function handles all commands
+- No duplicate logic between WebSocket and UI paths
+- Consistent parameter validation and error handling
+
+#### **🔄 Smart Response Routing**
+- Plugin detects command source via `webSocketCommandId`
+- Automatic response format selection:
+  - WebSocket: `{type: "command-result", id: "...", result: ...}`
+  - UI: `{type: "command_result", command: "...", result: ...}`
+
+#### **📊 Centralized State Management**
+- Plugin UI manages all pending WebSocket commands
+- Clean separation between UI state and WebSocket state
+- Proper cleanup of completed/failed commands
+
+#### **🛡️ Robust Error Handling**
+- Consistent error format across all paths
+- Proper error propagation to appropriate destinations
+- Timeout handling and connection state management
+
+### Message Formats
+
+#### **WebSocket Commands (MCP → Plugin)**
+```typescript
+// Request
+{
+  id: string,           // Unique command ID
+  command: string,      // Command name (e.g., "get_selection")
+  params: object        // Command parameters
+}
+
+// Success Response
+{
+  id: string,           // Same as request ID
+  result: unknown       // Command result
+}
+
+// Error Response
+{
+  id: string,           // Same as request ID
+  error: string         // Error message
+}
+```
+
+#### **UI Commands (Internal)**
+```typescript
+// Request
+{
+  type: string,         // Command name
+  webSocketCommandId?: string,  // Present if from WebSocket
+  ...params            // Command parameters
+}
+
+// Success Response (WebSocket origin)
+{
+  type: "command-result",
+  id: string,           // WebSocket command ID
+  result: unknown
+}
+
+// Success Response (UI origin)
+{
+  type: "command_result",
+  command: string,      // Command name
+  result: unknown
+}
+```
+
+### Implementation Notes
+
+#### **Backward Compatibility**
+- Existing cursor_mcp_plugin continues to work unchanged
+- WebSocket and MCP server protocols remain stable
+- Only figma-plugin-simple internal architecture improved
+
+#### **Type Safety**
+- Full TypeScript support with proper interfaces
+- Runtime parameter validation
+- Type-safe service method calls
+
+#### **Performance Optimizations**
+- No unnecessary message transformations
+- Efficient command routing and state management
+- Minimal memory footprint for pending commands
+
+This architecture provides a clean, maintainable, and efficient communication system while preserving compatibility with existing components.
+
 ## Development
 
 ### Building the Figma Plugin

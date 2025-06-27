@@ -207,88 +207,75 @@ export interface SetCornerRadiusParams extends BaseNodeParams {
 export type FigmaCommand =
   | "get_document_info"
   | "get_selection"
+  | "read_my_design"
   | "get_node_info"
   | "get_nodes_info"
-  | "read_my_design"
   | "create_rectangle"
   | "create_frame"
   | "create_text"
+  | "set_text_content"
+  | "scan_text_nodes"
+  | "set_multiple_text_contents"
   | "set_fill_color"
   | "set_stroke_color"
+  | "set_corner_radius"
   | "move_node"
   | "resize_node"
+  | "clone_node"
   | "delete_node"
   | "delete_multiple_nodes"
+  | "set_layout_mode"
+  | "set_padding"
+  | "set_axis_align"
+  | "set_layout_sizing"
+  | "set_item_spacing"
   | "get_styles"
   | "get_local_components"
   | "create_component_instance"
   | "get_instance_overrides"
   | "set_instance_overrides"
   | "export_node_as_image"
-  | "join"
-  | "set_corner_radius"
-  | "clone_node"
-  | "set_text_content"
-  | "scan_text_nodes"
-  | "set_multiple_text_contents"
   | "get_annotations"
   | "set_annotation"
   | "set_multiple_annotations"
   | "scan_nodes_by_types"
-  | "set_layout_mode"
-  | "set_padding"
-  | "set_axis_align"
-  | "set_layout_sizing"
-  | "set_item_spacing"
   | "get_reactions"
   | "set_default_connector"
-  | "create_connections";
+  | "create_connections"
+  | "join"
+  | "notify";
 
 export type CommandParams = {
   get_document_info: Record<string, never>;
   get_selection: Record<string, never>;
+  read_my_design: Record<string, never>;
   get_node_info: GetNodeInfoParams;
   get_nodes_info: GetNodesInfoParams;
   create_rectangle: CreateRectangleParams;
   create_frame: CreateFrameParams;
   create_text: CreateTextParams;
-  set_fill_color: SetFillColorParams;
-  set_stroke_color: SetStrokeColorParams;
-  move_node: MoveNodeParams;
-  resize_node: ResizeNodeParams;
-  delete_node: DeleteNodeParams;
-  delete_multiple_nodes: DeleteMultipleNodesParams;
-  get_styles: Record<string, never>;
-  get_local_components: Record<string, never>;
-  get_team_components: Record<string, never>;
-  create_component_instance: {
-    componentKey: string;
-    x: number;
-    y: number;
-  };
-  get_instance_overrides: {
-    instanceNodeId: string | null;
-  };
-  set_instance_overrides: {
-    targetNodeIds: string[];
-    sourceInstanceId: string;
-  };
-  export_node_as_image: {
-    nodeId: string;
-    format?: "PNG" | "JPG" | "SVG" | "PDF";
-    scale?: number;
-  };
-  execute_code: {
-    code: string;
-  };
-  join: {
-    channel: string;
-  };
-  set_corner_radius: SetCornerRadiusParams;
-  clone_node: CloneNodeParams;
   set_text_content: SetTextContentParams;
   scan_text_nodes: ScanTextNodesParams;
   set_multiple_text_contents: SetMultipleTextContentsParams;
+  set_fill_color: SetFillColorParams;
+  set_stroke_color: SetStrokeColorParams;
+  set_corner_radius: SetCornerRadiusParams;
+  move_node: MoveNodeParams;
+  resize_node: ResizeNodeParams;
+  clone_node: CloneNodeParams;
+  delete_node: DeleteNodeParams;
+  delete_multiple_nodes: DeleteMultipleNodesParams;
+  set_layout_mode: SetLayoutModeParams;
+  set_padding: SetPaddingParams;
+  set_axis_align: SetAxisAlignParams;
+  set_layout_sizing: SetLayoutSizingParams;
+  set_item_spacing: SetItemSpacingParams;
+  get_styles: Record<string, never>;
+  get_local_components: Record<string, never>;
+  create_component_instance: CreateComponentInstanceParams;
+  get_instance_overrides: GetInstanceOverridesParams;
+  set_instance_overrides: SetInstanceOverridesParams;
+  export_node_as_image: ExportNodeParams;
   get_annotations: {
     nodeId?: string;
     includeCategories?: boolean;
@@ -316,12 +303,12 @@ export type CommandParams = {
       text?: string;
     }>;
   };
-  read_my_design: Record<string, never>;
-  set_layout_mode: SetLayoutModeParams;
-  set_padding: SetPaddingParams;
-  set_axis_align: SetAxisAlignParams;
-  set_layout_sizing: SetLayoutSizingParams;
-  set_item_spacing: SetItemSpacingParams;
+  join: {
+    channel: string;
+  };
+  notify: {
+    message: string;
+  };
 };
 
 export interface ProgressMessage {
