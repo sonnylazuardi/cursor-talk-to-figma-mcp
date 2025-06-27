@@ -1,0 +1,804 @@
+{
+    "tracks": [
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          },
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C"
+            },
+            "href": "https://api.spotify.com/v1/artists/0du5cEVh5yTK9QJze8zA0C",
+            "id": "0du5cEVh5yTK9QJze8zA0C",
+            "name": "Bruno Mars",
+            "type": "artist",
+            "uri": "spotify:artist:0du5cEVh5yTK9QJze8zA0C"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 169917,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409172"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/4wJ5Qq0jBN4ajy7ouZIV1c"
+        },
+        "href": "https://api.spotify.com/v1/tracks/4wJ5Qq0jBN4ajy7ouZIV1c",
+        "id": "4wJ5Qq0jBN4ajy7ouZIV1c",
+        "is_local": false,
+        "is_playable": true,
+        "name": "APT.",
+        "popularity": 91,
+        "preview_url": null,
+        "track_number": 6,
+        "type": "track",
+        "uri": "spotify:track:4wJ5Qq0jBN4ajy7ouZIV1c"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 156685,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409170"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/1z5ebC9238uGoBgzYyvGpQ"
+        },
+        "href": "https://api.spotify.com/v1/tracks/1z5ebC9238uGoBgzYyvGpQ",
+        "id": "1z5ebC9238uGoBgzYyvGpQ",
+        "is_local": false,
+        "is_playable": true,
+        "name": "toxic till the end",
+        "popularity": 87,
+        "preview_url": null,
+        "track_number": 4,
+        "type": "track",
+        "uri": "spotify:track:1z5ebC9238uGoBgzYyvGpQ"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 216442,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409167"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/1lcBt7LoEikqYmhUoa2cez"
+        },
+        "href": "https://api.spotify.com/v1/tracks/1lcBt7LoEikqYmhUoa2cez",
+        "id": "1lcBt7LoEikqYmhUoa2cez",
+        "is_local": false,
+        "is_playable": true,
+        "name": "number one girl",
+        "popularity": 81,
+        "preview_url": null,
+        "track_number": 1,
+        "type": "track",
+        "uri": "spotify:track:1lcBt7LoEikqYmhUoa2cez"
+      },
+      {
+        "album": {
+          "album_type": "single",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            },
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3aly4xJOy3LVznzvRIvFYC"
+              },
+              "href": "https://api.spotify.com/v1/artists/3aly4xJOy3LVznzvRIvFYC",
+              "id": "3aly4xJOy3LVznzvRIvFYC",
+              "name": "F1 The Album",
+              "type": "artist",
+              "uri": "spotify:artist:3aly4xJOy3LVznzvRIvFYC"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/0k428U1kVhDaxhqBP7PbGr"
+          },
+          "href": "https://api.spotify.com/v1/albums/0k428U1kVhDaxhqBP7PbGr",
+          "id": "0k428U1kVhDaxhqBP7PbGr",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b273aab436e95f469b1d08a6239d",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e02aab436e95f469b1d08a6239d",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00004851aab436e95f469b1d08a6239d",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "Messy (From F1® The Movie)",
+          "release_date": "2025-05-08",
+          "release_date_precision": "day",
+          "total_tracks": 1,
+          "type": "album",
+          "uri": "spotify:album:0k428U1kVhDaxhqBP7PbGr"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          },
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3aly4xJOy3LVznzvRIvFYC"
+            },
+            "href": "https://api.spotify.com/v1/artists/3aly4xJOy3LVznzvRIvFYC",
+            "id": "3aly4xJOy3LVznzvRIvFYC",
+            "name": "F1 The Album",
+            "type": "artist",
+            "uri": "spotify:artist:3aly4xJOy3LVznzvRIvFYC"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 179055,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22503389"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/6Wobsw9uZ0D0xkfOjxXSq9"
+        },
+        "href": "https://api.spotify.com/v1/tracks/6Wobsw9uZ0D0xkfOjxXSq9",
+        "id": "6Wobsw9uZ0D0xkfOjxXSq9",
+        "is_local": false,
+        "is_playable": true,
+        "name": "Messy (From F1® The Movie)",
+        "popularity": 80,
+        "preview_url": null,
+        "track_number": 1,
+        "type": "track",
+        "uri": "spotify:track:6Wobsw9uZ0D0xkfOjxXSq9"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 133113,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409171"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/3fpWkbEZMP1BgOOfymwoaS"
+        },
+        "href": "https://api.spotify.com/v1/tracks/3fpWkbEZMP1BgOOfymwoaS",
+        "id": "3fpWkbEZMP1BgOOfymwoaS",
+        "is_local": false,
+        "is_playable": true,
+        "name": "drinks or coffee",
+        "popularity": 79,
+        "preview_url": null,
+        "track_number": 5,
+        "type": "track",
+        "uri": "spotify:track:3fpWkbEZMP1BgOOfymwoaS"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 246606,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409174"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/5OdI6v2L7Aez4cclpbojiZ"
+        },
+        "href": "https://api.spotify.com/v1/tracks/5OdI6v2L7Aez4cclpbojiZ",
+        "id": "5OdI6v2L7Aez4cclpbojiZ",
+        "is_local": false,
+        "is_playable": true,
+        "name": "stay a little longer",
+        "popularity": 76,
+        "preview_url": null,
+        "track_number": 8,
+        "type": "track",
+        "uri": "spotify:track:5OdI6v2L7Aez4cclpbojiZ"
+      },
+      {
+        "album": {
+          "album_type": "single",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/52MYcZ4Hzvy9vJcPicjfHZ"
+          },
+          "href": "https://api.spotify.com/v1/albums/52MYcZ4Hzvy9vJcPicjfHZ",
+          "id": "52MYcZ4Hzvy9vJcPicjfHZ",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2730fdd9fc8745ed9185dc95873",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e020fdd9fc8745ed9185dc95873",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048510fdd9fc8745ed9185dc95873",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "R",
+          "release_date": "2021-03-12",
+          "release_date_precision": "day",
+          "total_tracks": 2,
+          "type": "album",
+          "uri": "spotify:album:52MYcZ4Hzvy9vJcPicjfHZ"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 168085,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "KRA402100040"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/2xgACMNtJ5YktyvOC83SPO"
+        },
+        "href": "https://api.spotify.com/v1/tracks/2xgACMNtJ5YktyvOC83SPO",
+        "id": "2xgACMNtJ5YktyvOC83SPO",
+        "is_local": false,
+        "is_playable": true,
+        "name": "On The Ground",
+        "popularity": 71,
+        "preview_url": null,
+        "track_number": 1,
+        "type": "track",
+        "uri": "spotify:track:2xgACMNtJ5YktyvOC83SPO"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 166742,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409173"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/77n3jFGqPPxYrEGwrWylNv"
+        },
+        "href": "https://api.spotify.com/v1/tracks/77n3jFGqPPxYrEGwrWylNv",
+        "id": "77n3jFGqPPxYrEGwrWylNv",
+        "is_local": false,
+        "is_playable": true,
+        "name": "gameboy",
+        "popularity": 76,
+        "preview_url": null,
+        "track_number": 7,
+        "type": "track",
+        "uri": "spotify:track:77n3jFGqPPxYrEGwrWylNv"
+      },
+      {
+        "album": {
+          "album_type": "single",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/52MYcZ4Hzvy9vJcPicjfHZ"
+          },
+          "href": "https://api.spotify.com/v1/albums/52MYcZ4Hzvy9vJcPicjfHZ",
+          "id": "52MYcZ4Hzvy9vJcPicjfHZ",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2730fdd9fc8745ed9185dc95873",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e020fdd9fc8745ed9185dc95873",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048510fdd9fc8745ed9185dc95873",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "R",
+          "release_date": "2021-03-12",
+          "release_date_precision": "day",
+          "total_tracks": 2,
+          "type": "album",
+          "uri": "spotify:album:52MYcZ4Hzvy9vJcPicjfHZ"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 207163,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "KRA402100041"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/2ayIgfvWo3SfYP2pVOr4pC"
+        },
+        "href": "https://api.spotify.com/v1/tracks/2ayIgfvWo3SfYP2pVOr4pC",
+        "id": "2ayIgfvWo3SfYP2pVOr4pC",
+        "is_local": false,
+        "is_playable": true,
+        "name": "Gone",
+        "popularity": 71,
+        "preview_url": null,
+        "track_number": 2,
+        "type": "track",
+        "uri": "spotify:track:2ayIgfvWo3SfYP2pVOr4pC"
+      },
+      {
+        "album": {
+          "album_type": "album",
+          "artists": [
+            {
+              "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+              },
+              "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+              "id": "3eVa5w3URK5duf6eyVDbu9",
+              "name": "ROSÉ",
+              "type": "artist",
+              "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+            }
+          ],
+          "external_urls": {
+            "spotify": "https://open.spotify.com/album/7kFyd5oyJdVX2pIi6P4iHE"
+          },
+          "href": "https://api.spotify.com/v1/albums/7kFyd5oyJdVX2pIi6P4iHE",
+          "id": "7kFyd5oyJdVX2pIi6P4iHE",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2735074bd0894cb1340b8d8a678",
+              "height": 640,
+              "width": 640
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d00001e025074bd0894cb1340b8d8a678",
+              "height": 300,
+              "width": 300
+            },
+            {
+              "url": "https://i.scdn.co/image/ab67616d000048515074bd0894cb1340b8d8a678",
+              "height": 64,
+              "width": 64
+            }
+          ],
+          "is_playable": true,
+          "name": "rosie",
+          "release_date": "2024-12-06",
+          "release_date_precision": "day",
+          "total_tracks": 12,
+          "type": "album",
+          "uri": "spotify:album:7kFyd5oyJdVX2pIi6P4iHE"
+        },
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3eVa5w3URK5duf6eyVDbu9",
+            "id": "3eVa5w3URK5duf6eyVDbu9",
+            "name": "ROSÉ",
+            "type": "artist",
+            "uri": "spotify:artist:3eVa5w3URK5duf6eyVDbu9"
+          }
+        ],
+        "disc_number": 1,
+        "duration_ms": 167748,
+        "explicit": false,
+        "external_ids": {
+          "isrc": "USAT22409169"
+        },
+        "external_urls": {
+          "spotify": "https://open.spotify.com/track/4HxGH28DitgAuuKpEVrLzN"
+        },
+        "href": "https://api.spotify.com/v1/tracks/4HxGH28DitgAuuKpEVrLzN",
+        "id": "4HxGH28DitgAuuKpEVrLzN",
+        "is_local": false,
+        "is_playable": true,
+        "name": "two years",
+        "popularity": 75,
+        "preview_url": null,
+        "track_number": 3,
+        "type": "track",
+        "uri": "spotify:track:4HxGH28DitgAuuKpEVrLzN"
+      }
+    ]
+  }

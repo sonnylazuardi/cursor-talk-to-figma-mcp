@@ -5,8 +5,24 @@ import ConnectionView from "./components/ConnectionView";
 import AboutView from "./components/AboutView";
 import { SettingsView } from "./components/SettingsView";
 
+interface WebSocketCommand {
+  id: string;
+  command: string;
+  params: Record<string, unknown>;
+}
+
+interface PluginMessage {
+  type: string;
+  id?: string;
+  command?: string;
+  result?: unknown;
+  error?: string;
+  [key: string]: unknown;
+}
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('connection');
+  const [pendingWebSocketCommands, setPendingWebSocketCommands] = useState<Map<string, WebSocketCommand>>(new Map());
 
   useEffect(() => {
     // Setup routes
@@ -34,11 +50,129 @@ const App: React.FC = () => {
     // Initialize router
     router.init();
 
+    // Listen for messages from plugin controller
+    const handlePluginMessage = (event: MessageEvent) => {
+      const message = event.data.pluginMessage as PluginMessage;
+      if (!message) return;
+
+      console.log('📥 Received from plugin controller:', message);
+
+      // Handle WebSocket command responses
+      if (message.type === 'command-result' && message.id) {
+        handleWebSocketCommandResult(message.id, message.result);
+      } else if (message.type === 'command-error' && message.id) {
+        handleWebSocketCommandError(message.id, message.error || 'Unknown error');
+      } else if (message.type === 'command_progress') {
+        handleProgressUpdate(message);
+      } else {
+        // Handle regular UI responses (non-WebSocket)
+        console.log('📋 UI Response:', message);
+      }
+    };
+
+    window.addEventListener('message', handlePluginMessage);
+
     // Cleanup on unmount
     return () => {
       router.destroy();
+      window.removeEventListener('message', handlePluginMessage);
     };
   }, []);
+
+  // Handle WebSocket command execution - reserved for future ConnectionView integration
+  // This function is kept for future WebSocket integration
+  const executeWebSocketCommand = React.useCallback((wsCommand: WebSocketCommand) => {
+    console.log('🔗 Executing WebSocket command:', wsCommand);
+    
+    // Store the pending command
+    setPendingWebSocketCommands(prev => new Map(prev.set(wsCommand.id, wsCommand)));
+    
+    // Send to plugin controller - preserve execute-command structure
+    const message = {
+      type: 'execute-command',
+      webSocketCommandId: wsCommand.id,  // Mark this as WebSocket origin
+      command: wsCommand.command,
+      params: wsCommand.params
+    };
+    
+    console.log('📤 Sending to plugin controller:', message);
+    parent.postMessage({ pluginMessage: message }, '*');
+  }, []);
+  
+  // Expose function to window for future WebSocket integration
+  React.useEffect(() => {
+    (window as unknown as { executeWebSocketCommand?: (cmd: WebSocketCommand) => void }).executeWebSocketCommand = executeWebSocketCommand;
+    return () => {
+      delete (window as unknown as { executeWebSocketCommand?: (cmd: WebSocketCommand) => void }).executeWebSocketCommand;
+    };
+  }, [executeWebSocketCommand]);
+
+  // Handle WebSocket command success response
+  const handleWebSocketCommandResult = (commandId: string, result: unknown) => {
+    const command = pendingWebSocketCommands.get(commandId);
+    if (!command) {
+      // This is normal - ConnectionView handles WebSocket responses directly
+      return;
+    }
+
+    console.log('✅ WebSocket command completed:', commandId, result);
+    
+    // Send response back to WebSocket (via ConnectionView)
+    const connectionView = document.querySelector('[data-connection-view]') as HTMLElement & {
+      sendSuccessResponse?: (id: string, result: unknown) => void;
+    };
+    if (connectionView && connectionView.sendSuccessResponse) {
+      connectionView.sendSuccessResponse(commandId, result);
+    }
+
+    // Clean up
+    setPendingWebSocketCommands(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(commandId);
+      return newMap;
+    });
+  };
+
+  // Handle WebSocket command error response
+  const handleWebSocketCommandError = (commandId: string, error: string) => {
+    const command = pendingWebSocketCommands.get(commandId);
+    if (!command) {
+      // This is normal - ConnectionView handles WebSocket responses directly
+      return;
+    }
+
+    console.error('❌ WebSocket command failed:', commandId, error);
+    
+    // Send error response back to WebSocket (via ConnectionView)
+    const connectionView = document.querySelector('[data-connection-view]') as HTMLElement & {
+      sendErrorResponse?: (id: string, error: string) => void;
+    };
+    if (connectionView && connectionView.sendErrorResponse) {
+      connectionView.sendErrorResponse(commandId, error);
+    }
+
+    // Clean up
+    setPendingWebSocketCommands(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(commandId);
+      return newMap;
+    });
+  };
+
+  // Handle progress updates
+  const handleProgressUpdate = (message: PluginMessage) => {
+    console.log('📊 Progress update:', message);
+    
+    // Forward progress to WebSocket if it's a WebSocket command
+    if (message.commandId && pendingWebSocketCommands.has(message.commandId as string)) {
+      const connectionView = document.querySelector('[data-connection-view]') as HTMLElement & {
+        sendProgressUpdate?: (message: PluginMessage) => void;
+      };
+      if (connectionView && connectionView.sendProgressUpdate) {
+        connectionView.sendProgressUpdate(message);
+      }
+    }
+  };
 
   const handleTabClick = (tab: string) => {
     router.navigate(`/${tab}`);

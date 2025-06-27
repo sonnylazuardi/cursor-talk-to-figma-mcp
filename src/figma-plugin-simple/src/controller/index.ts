@@ -18,9 +18,6 @@ import type {
   PrimaryAxisAlign,
   CounterAxisAlign,
   LayoutSizing,
-  CreateRectangleParams,
-  CreateFrameParams,
-  CreateTextParams,
   SetTextContentParams,
   ScanTextNodesParams,
   SetMultipleTextContentsParams,
@@ -29,19 +26,12 @@ import type {
   SetAxisAlignParams,
   SetLayoutSizingParams,
   SetItemSpacingParams,
-  SetFillColorParams,
-  SetStrokeColorParams,
   SetCornerRadiusParams,
-  MoveNodeParams,
-  ResizeNodeParams,
-  DeleteNodeParams,
-  DeleteMultipleNodesParams,
-  CloneNodeParams,
   CreateComponentInstanceParams,
   GetInstanceOverridesParams,
   SetInstanceOverridesParams,
   ExportNodeParams,
-  ExportFormat,
+  SetMultipleAnnotationsParams,
 } from "../types";
 
 // Initialize services
@@ -58,726 +48,522 @@ const componentService = new ComponentService();
 // Show UI
 figma.showUI(__html__, { width: 400, height: 600 });
 
+// Common command execution function
+async function executeCommand(command: string, params: Record<string, unknown>): Promise<unknown> {
+  switch (command) {
+    // === Document Operations ===
+      case "get_document_info": {
+      return await documentService.getDocumentInfo();
+      }
+
+      case "get_selection": {
+      return await documentService.getSelection();
+      }
+
+      case "read_my_design": {
+      return await documentService.readMyDesign();
+      }
+
+      case "get_node_info": {
+      if (!params.nodeId || typeof params.nodeId !== "string") {
+          throw new Error("Missing nodeId parameter");
+        }
+      return await documentService.getNodeInfo({
+        nodeId: params.nodeId,
+      });
+      }
+
+      case "get_nodes_info": {
+      if (!params.nodeIds || !Array.isArray(params.nodeIds)) {
+          throw new Error("Missing or invalid nodeIds parameter");
+        }
+      return await documentService.getNodesInfo({
+        nodeIds: params.nodeIds as string[],
+      });
+    }
+
+    // === Creation Operations ===
+    case "create_rectangle": {
+      const rectParams = {
+        x: params.x as number,
+        y: params.y as number,
+        width: params.width as number,
+        height: params.height as number,
+        name: params.name as string | undefined,
+        parentId: params.parentId as string | undefined,
+      };
+      if (rectParams.x === undefined || rectParams.y === undefined || 
+          rectParams.width === undefined || rectParams.height === undefined) {
+        throw new Error("Missing required parameters: x, y, width, height");
+      }
+      return await creationService.createRectangle(rectParams);
+    }
+
+    case "create_frame": {
+      const frameParams = {
+        x: params.x as number,
+        y: params.y as number,
+        width: params.width as number,
+        height: params.height as number,
+        name: params.name as string | undefined,
+        parentId: params.parentId as string | undefined,
+        fillColor: params.fillColor as RGBAColor | undefined,
+        strokeColor: params.strokeColor as RGBAColor | undefined,
+        strokeWeight: params.strokeWeight as number | undefined,
+        layoutMode: params.layoutMode as LayoutMode | undefined,
+        layoutWrap: params.layoutWrap as LayoutWrap | undefined,
+        paddingTop: params.paddingTop as number | undefined,
+        paddingRight: params.paddingRight as number | undefined,
+        paddingBottom: params.paddingBottom as number | undefined,
+        paddingLeft: params.paddingLeft as number | undefined,
+        primaryAxisAlignItems: params.primaryAxisAlignItems as PrimaryAxisAlign | undefined,
+        counterAxisAlignItems: params.counterAxisAlignItems as CounterAxisAlign | undefined,
+        layoutSizingHorizontal: params.layoutSizingHorizontal as LayoutSizing | undefined,
+        layoutSizingVertical: params.layoutSizingVertical as LayoutSizing | undefined,
+        itemSpacing: params.itemSpacing as number | undefined,
+      };
+      if (frameParams.x === undefined || frameParams.y === undefined || 
+          frameParams.width === undefined || frameParams.height === undefined) {
+        throw new Error("Missing required parameters: x, y, width, height");
+      }
+      return await creationService.createFrame(frameParams);
+    }
+
+    case "create_text": {
+      const textParams = {
+        x: params.x as number,
+        y: params.y as number,
+        text: params.text as string,
+        fontSize: params.fontSize as number | undefined,
+        fontWeight: params.fontWeight as number | undefined,
+        fontColor: params.fontColor as RGBAColor | undefined,
+        name: params.name as string | undefined,
+        parentId: params.parentId as string | undefined,
+      };
+      if (textParams.x === undefined || textParams.y === undefined || !textParams.text) {
+        throw new Error("Missing required parameters: x, y, text");
+      }
+      return await creationService.createText(textParams);
+    }
+
+    // === Text Operations ===
+    case "set_text_content": {
+      const setTextParams: SetTextContentParams = {
+        nodeId: params.nodeId as string,
+        text: params.text as string,
+      };
+      if (!setTextParams.nodeId || !setTextParams.text) {
+        throw new Error("Missing required parameters: nodeId, text");
+      }
+      return await textService.setTextContent(setTextParams);
+    }
+
+    case "scan_text_nodes": {
+      const scanParams: ScanTextNodesParams = {
+        nodeId: params.nodeId as string,
+        useChunking: params.useChunking as boolean | undefined,
+        chunkSize: params.chunkSize as number | undefined,
+      };
+      if (!scanParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await textService.scanTextNodes(scanParams);
+    }
+
+    case "set_multiple_text_contents": {
+      const multiTextParams: SetMultipleTextContentsParams = {
+        nodeId: params.nodeId as string,
+        text: params.text as Array<{ nodeId: string; text: string }>,
+      };
+      if (!multiTextParams.nodeId || !multiTextParams.text) {
+        throw new Error("Missing required parameters: nodeId, text");
+      }
+      return await textService.setMultipleTextContents(multiTextParams);
+    }
+
+    // === Style Operations ===
+    case "set_fill_color": {
+      const fillParams = {
+        nodeId: params.nodeId as string,
+        color: {
+          r: params.r as number,
+          g: params.g as number,
+          b: params.b as number,
+          a: params.a as number | undefined
+        } as RGBAColor,
+      };
+      if (!fillParams.nodeId || fillParams.color.r === undefined || 
+          fillParams.color.g === undefined || fillParams.color.b === undefined) {
+        throw new Error("Missing required parameters: nodeId, r, g, b");
+      }
+      return await styleService.setFillColor(fillParams);
+    }
+
+    case "set_stroke_color": {
+      const strokeParams = {
+        nodeId: params.nodeId as string,
+        color: {
+          r: params.r as number,
+          g: params.g as number,
+          b: params.b as number,
+          a: params.a as number | undefined
+        } as RGBAColor,
+        weight: params.weight as number | undefined,
+      };
+      if (!strokeParams.nodeId || strokeParams.color.r === undefined || 
+          strokeParams.color.g === undefined || strokeParams.color.b === undefined) {
+        throw new Error("Missing required parameters: nodeId, r, g, b");
+      }
+      return await styleService.setStrokeColor(strokeParams);
+    }
+
+    case "set_corner_radius": {
+      const cornerParams: SetCornerRadiusParams = {
+        nodeId: params.nodeId as string,
+        radius: params.radius as number,
+        corners: params.corners as boolean[] | undefined,
+      };
+      if (!cornerParams.nodeId || cornerParams.radius === undefined) {
+        throw new Error("Missing required parameters: nodeId, radius");
+      }
+      return await styleService.setCornerRadius(cornerParams);
+    }
+
+    // === Layout Management Operations ===
+    case "move_node": {
+      const moveParams = {
+        nodeId: params.nodeId as string,
+        x: params.x as number,
+        y: params.y as number,
+      };
+      if (!moveParams.nodeId || moveParams.x === undefined || moveParams.y === undefined) {
+        throw new Error("Missing required parameters: nodeId, x, y");
+      }
+      return await layoutManagementService.moveNode(moveParams);
+    }
+
+    case "resize_node": {
+      const resizeParams = {
+        nodeId: params.nodeId as string,
+        width: params.width as number,
+        height: params.height as number,
+      };
+      if (!resizeParams.nodeId || resizeParams.width === undefined || resizeParams.height === undefined) {
+        throw new Error("Missing required parameters: nodeId, width, height");
+      }
+      return await layoutManagementService.resizeNode(resizeParams);
+    }
+
+    case "clone_node": {
+      const cloneParams = {
+        nodeId: params.nodeId as string,
+        x: params.x as number | undefined,
+        y: params.y as number | undefined,
+      };
+      if (!cloneParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await layoutManagementService.cloneNode(cloneParams);
+    }
+
+    case "delete_node": {
+      const deleteParams = {
+        nodeId: params.nodeId as string,
+      };
+      if (!deleteParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await layoutManagementService.deleteNode(deleteParams);
+    }
+
+    case "delete_multiple_nodes": {
+      const deleteMultipleParams = {
+        nodeIds: params.nodeIds as string[],
+      };
+      if (!deleteMultipleParams.nodeIds || !Array.isArray(deleteMultipleParams.nodeIds)) {
+        throw new Error("Missing required parameter: nodeIds");
+      }
+      return await layoutManagementService.deleteMultipleNodes(deleteMultipleParams);
+    }
+
+    // === Layout Operations ===
+      case "set_layout_mode": {
+      const layoutModeParams: SetLayoutModeParams = {
+        nodeId: params.nodeId as string,
+        layoutMode: params.layoutMode as LayoutMode,
+        layoutWrap: params.layoutWrap as LayoutWrap | undefined,
+      };
+      if (!layoutModeParams.nodeId || !layoutModeParams.layoutMode) {
+        throw new Error("Missing required parameters: nodeId, layoutMode");
+      }
+      return await layoutService.setLayoutMode(layoutModeParams);
+      }
+
+      case "set_padding": {
+      const paddingParams: SetPaddingParams = {
+        nodeId: params.nodeId as string,
+        paddingTop: params.paddingTop as number | undefined,
+        paddingRight: params.paddingRight as number | undefined,
+        paddingBottom: params.paddingBottom as number | undefined,
+        paddingLeft: params.paddingLeft as number | undefined,
+      };
+      if (!paddingParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await layoutService.setPadding(paddingParams);
+      }
+
+      case "set_axis_align": {
+      const axisAlignParams: SetAxisAlignParams = {
+        nodeId: params.nodeId as string,
+        primaryAxisAlignItems: params.primaryAxisAlignItems as PrimaryAxisAlign | undefined,
+        counterAxisAlignItems: params.counterAxisAlignItems as CounterAxisAlign | undefined,
+      };
+      if (!axisAlignParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await layoutService.setAxisAlign(axisAlignParams);
+      }
+
+      case "set_layout_sizing": {
+      const layoutSizingParams: SetLayoutSizingParams = {
+        nodeId: params.nodeId as string,
+        layoutSizingHorizontal: params.layoutSizingHorizontal as LayoutSizing | undefined,
+        layoutSizingVertical: params.layoutSizingVertical as LayoutSizing | undefined,
+      };
+      if (!layoutSizingParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await layoutService.setLayoutSizing(layoutSizingParams);
+      }
+
+      case "set_item_spacing": {
+      const itemSpacingParams: SetItemSpacingParams = {
+        nodeId: params.nodeId as string,
+        itemSpacing: params.itemSpacing as number,
+      };
+      if (!itemSpacingParams.nodeId || itemSpacingParams.itemSpacing === undefined) {
+        throw new Error("Missing required parameters: nodeId, itemSpacing");
+      }
+      return await layoutService.setItemSpacing(itemSpacingParams);
+    }
+
+    // === Component Operations ===
+    case "get_styles": {
+      return await componentService.getStyles();
+    }
+
+    case "get_local_components": {
+      return await componentService.getLocalComponents();
+    }
+
+    case "create_component_instance": {
+      const instanceParams: CreateComponentInstanceParams = {
+        componentKey: params.componentKey as string,
+        x: params.x as number,
+        y: params.y as number,
+      };
+      if (!instanceParams.componentKey || instanceParams.x === undefined || instanceParams.y === undefined) {
+        throw new Error("Missing required parameters: componentKey, x, y");
+      }
+      return await componentService.createComponentInstance(instanceParams);
+    }
+
+    case "get_instance_overrides": {
+      const overridesParams: GetInstanceOverridesParams = {
+        nodeId: params.nodeId as string | undefined,
+      };
+      return await componentService.getInstanceOverrides(overridesParams);
+    }
+
+    case "set_instance_overrides": {
+      const setOverridesParams: SetInstanceOverridesParams = {
+        sourceInstanceId: params.sourceInstanceId as string,
+        targetNodeIds: params.targetNodeIds as string[],
+      };
+      if (!setOverridesParams.sourceInstanceId || !setOverridesParams.targetNodeIds) {
+        throw new Error("Missing required parameters: sourceInstanceId, targetNodeIds");
+      }
+      return await componentService.setInstanceOverrides(setOverridesParams);
+    }
+
+    case "export_node_as_image": {
+      const exportParams: ExportNodeParams = {
+        nodeId: params.nodeId as string,
+        format: params.format as "PNG" | "JPG" | "SVG" | "PDF" | undefined,
+        scale: params.scale as number | undefined,
+      };
+      if (!exportParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      return await componentService.exportNodeAsImage(exportParams);
+    }
+
+    // === Annotation Operations ===
+    case "get_annotations": {
+      const annotationParams = {
+        nodeId: params.nodeId as string | undefined,
+        includeCategories: params.includeCategories as boolean | undefined,
+      };
+      return await annotationService.getAnnotations(annotationParams);
+    }
+
+    case "set_annotation": {
+      const setAnnotationParams = {
+        nodeId: params.nodeId as string,
+        labelMarkdown: params.labelMarkdown as string,
+        categoryId: params.categoryId as string | undefined,
+        annotationId: params.annotationId as string | undefined,
+        properties: params.properties as Array<{ type: string }> | undefined,
+      };
+      if (!setAnnotationParams.nodeId || !setAnnotationParams.labelMarkdown) {
+        throw new Error("Missing required parameters: nodeId, labelMarkdown");
+      }
+      return await annotationService.setAnnotation(setAnnotationParams);
+    }
+
+    case "set_multiple_annotations": {
+      const multiAnnotationParams: SetMultipleAnnotationsParams = {
+        nodeId: params.nodeId as string,
+        annotations: params.annotations as Array<{
+          nodeId: string;
+          labelMarkdown: string;
+          categoryId?: string;
+          annotationId?: string;
+          properties?: Array<{ type: string }>;
+        }>,
+      };
+      if (!multiAnnotationParams.nodeId || !multiAnnotationParams.annotations) {
+        throw new Error("Missing required parameters: nodeId, annotations");
+      }
+      return await annotationService.setMultipleAnnotations(multiAnnotationParams);
+    }
+
+    case "scan_nodes_by_types": {
+      const scanTypesParams = {
+        nodeId: params.nodeId as string,
+        types: params.types as string[],
+      };
+      if (!scanTypesParams.nodeId || !scanTypesParams.types) {
+        throw new Error("Missing required parameters: nodeId, types");
+      }
+      return await annotationService.scanNodesByTypes(scanTypesParams);
+    }
+
+    // === Prototype Operations ===
+    case "get_reactions": {
+      const reactionsParams = {
+        nodeIds: params.nodeIds as string[],
+      };
+      if (!reactionsParams.nodeIds || !Array.isArray(reactionsParams.nodeIds)) {
+        throw new Error("Missing required parameter: nodeIds");
+      }
+      return await prototypeService.getReactions(reactionsParams.nodeIds);
+    }
+
+    case "set_default_connector": {
+      const connectorParams = {
+        connectorId: params.connectorId as string | undefined,
+      };
+      return await prototypeService.setDefaultConnector(connectorParams.connectorId);
+    }
+
+    case "create_connections": {
+      const connectionsParams = {
+        connections: params.connections as Array<{
+          startNodeId: string;
+          endNodeId: string;
+          text?: string;
+        }>,
+      };
+      if (!connectionsParams.connections || !Array.isArray(connectionsParams.connections)) {
+        throw new Error("Missing required parameter: connections");
+      }
+      return await prototypeService.createConnections(connectionsParams.connections);
+    }
+
+    // === Channel Operations ===
+    case "join": {
+      const joinParams = {
+        channel: params.channel as string,
+      };
+      if (!joinParams.channel) {
+        throw new Error("Missing required parameter: channel");
+      }
+      // Join channel operation - this is typically handled by the WebSocket layer
+      return { success: true, message: `Joined channel: ${joinParams.channel}` };
+    }
+
+    // === Utility Operations ===
+    case "notify": {
+      const notifyParams = {
+        message: params.message as string,
+      };
+      if (!notifyParams.message) {
+        throw new Error("Missing required parameter: message");
+      }
+      // Show notification in Figma
+      figma.notify(notifyParams.message);
+      return { success: true, message: `Notification shown: ${notifyParams.message}` };
+    }
+
+
+
+    default:
+      throw new Error(`Unknown command: ${command}`);
+  }
+}
+
 // Handle messages from UI
 figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
   console.log("🔥 Received message:", msg.type, msg);
 
-  try {
-    switch (msg.type) {
-      case "test":
-        figma.notify("Plugin is working! 🎉");
-        figma.ui.postMessage({
-          type: "test-result",
-          message: "Test successful",
-          timestamp: Date.now(),
-        });
-        break;
-
-      case "get_document_info": {
-        const docInfo = await documentService.getDocumentInfo();
-        console.log("Document Info:", docInfo);
-        figma.notify("Document info logged to console");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_document_info",
-          result: docInfo,
-        });
-        break;
-      }
-
-      case "get_selection": {
-        const selection = await documentService.getSelection();
-        console.log("Selection Info:", selection);
-        figma.notify(`${selection.selectionCount} nodes selected`);
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_selection",
-          result: selection,
-        });
-        break;
-      }
-
-      case "read_my_design": {
-        const designInfo = await documentService.readMyDesign();
-        console.log("Design Info:", designInfo);
-        figma.notify(
-          `Read ${
-            Array.isArray(designInfo) ? designInfo.length : 0
-          } selected nodes`
-        );
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "read_my_design",
-          result: designInfo,
-        });
-        break;
-      }
-
-      case "get_node_info": {
-        if (!msg.nodeId || typeof msg.nodeId !== "string") {
-          throw new Error("Missing nodeId parameter");
-        }
-        const nodeInfo = await documentService.getNodeInfo({
-          nodeId: msg.nodeId,
-        });
-        console.log("Node Info:", nodeInfo);
-        figma.notify("Node info logged to console");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_node_info",
-          result: nodeInfo,
-        });
-        break;
-      }
-
-      case "get_nodes_info": {
-        if (!msg.nodeIds || !Array.isArray(msg.nodeIds)) {
-          throw new Error("Missing or invalid nodeIds parameter");
-        }
-        const nodesInfo = await documentService.getNodesInfo({
-          nodeIds: msg.nodeIds as string[],
-        });
-        console.log("Nodes Info:", nodesInfo);
-        figma.notify(
-          `Got info for ${
-            Array.isArray(nodesInfo) ? nodesInfo.length : 0
-          } nodes`
-        );
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_nodes_info",
-          result: nodesInfo,
-        });
-        break;
-      }
-
-      // Annotation commands
-      case "get_annotations": {
-        const params = {
-          nodeId: msg.nodeId as string | undefined,
-          includeCategories: msg.includeCategories as boolean | undefined,
-        };
-        const annotations = await annotationService.getAnnotations(params);
-        figma.ui.postMessage({
-          type: "get_annotations-result",
-          data: annotations,
-        });
-        break;
-      }
-
-      case "set_annotation": {
-        const params = {
-          nodeId: msg.nodeId as string,
-          annotationId: msg.annotationId as string | undefined,
-          labelMarkdown: msg.labelMarkdown as string,
-          categoryId: msg.categoryId as string | undefined,
-          properties: msg.properties as Array<{ type: string }> | undefined,
-        };
-        if (!params.nodeId || !params.labelMarkdown) {
-          throw new Error("nodeId and labelMarkdown are required");
-        }
-        const result = await annotationService.setAnnotation(params);
-        figma.ui.postMessage({
-          type: "set_annotation-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "set_multiple_annotations": {
-        const params = {
-          nodeId: msg.nodeId as string,
-          annotations: msg.annotations as Array<{
-            nodeId: string;
-            labelMarkdown: string;
-            categoryId?: string;
-            annotationId?: string;
-            properties?: Array<{ type: string }>;
-          }>,
-        };
-        if (!params.nodeId || !params.annotations) {
-          throw new Error("nodeId and annotations are required");
-        }
-        const result = await annotationService.setMultipleAnnotations(params);
-        figma.ui.postMessage({
-          type: "set_multiple_annotations-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "scan_nodes_by_types": {
-        const params = {
-          nodeId: msg.nodeId as string,
-          types: msg.types as string[],
-        };
-        if (!params.nodeId || !params.types) {
-          throw new Error("nodeId and types are required");
-        }
-        const result = await annotationService.scanNodesByTypes(params);
-        figma.ui.postMessage({
-          type: "scan_nodes_by_types-result",
-          data: result,
-        });
-        break;
-      }
-
-      // Prototyping commands
-      case "get_reactions": {
-        const nodeIds = msg.nodeIds as string[];
-        if (!nodeIds || !Array.isArray(nodeIds)) {
-          throw new Error("nodeIds parameter is required and must be an array");
-        }
-
-        const result = await prototypeService.getReactions(nodeIds);
-        figma.ui.postMessage({
-          type: "get_reactions-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "set_default_connector": {
-        const connectorId = msg.connectorId as string | undefined;
-        const result = await prototypeService.setDefaultConnector(connectorId);
-        figma.ui.postMessage({
-          type: "set_default_connector-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "create_connections": {
-        const connections = msg.connections as Array<{
-          startNodeId: string;
-          endNodeId: string;
-          text?: string;
-        }>;
-        if (!connections || !Array.isArray(connections)) {
-          throw new Error(
-            "connections parameter is required and must be an array"
-          );
-        }
-
-        const result = await prototypeService.createConnections(connections);
-        figma.ui.postMessage({
-          type: "create_connections-result",
-          data: result,
-        });
-        break;
-      }
-
-      // Creation commands
-      case "create_rectangle": {
-        const params: CreateRectangleParams = {
-          x: msg.x as number,
-          y: msg.y as number,
-          width: msg.width as number,
-          height: msg.height as number,
-          name: msg.name as string | undefined,
-          parentId: msg.parentId as string | undefined,
-        };
-        const result = await creationService.createRectangle(params);
-        figma.notify("Rectangle created successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "create_rectangle",
-          result: result,
-        });
-        break;
-      }
-
-      case "create_frame": {
-        const params: CreateFrameParams = {
-          x: msg.x as number,
-          y: msg.y as number,
-          width: msg.width as number,
-          height: msg.height as number,
-          name: msg.name as string | undefined,
-          parentId: msg.parentId as string | undefined,
-          fillColor: msg.fillColor as RGBAColor | undefined,
-          strokeColor: msg.strokeColor as RGBAColor | undefined,
-          strokeWeight: msg.strokeWeight as number | undefined,
-          layoutMode: msg.layoutMode as LayoutMode | undefined,
-          layoutWrap: msg.layoutWrap as LayoutWrap | undefined,
-          paddingTop: msg.paddingTop as number | undefined,
-          paddingRight: msg.paddingRight as number | undefined,
-          paddingBottom: msg.paddingBottom as number | undefined,
-          paddingLeft: msg.paddingLeft as number | undefined,
-          primaryAxisAlignItems: msg.primaryAxisAlignItems as
-            | PrimaryAxisAlign
-            | undefined,
-          counterAxisAlignItems: msg.counterAxisAlignItems as
-            | CounterAxisAlign
-            | undefined,
-          layoutSizingHorizontal: msg.layoutSizingHorizontal as
-            | LayoutSizing
-            | undefined,
-          layoutSizingVertical: msg.layoutSizingVertical as
-            | LayoutSizing
-            | undefined,
-          itemSpacing: msg.itemSpacing as number | undefined,
-        };
-        const result = await creationService.createFrame(params);
-        figma.notify("Frame created successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "create_frame",
-          result: result,
-        });
-        break;
-      }
-
-      case "create_text": {
-        const params: CreateTextParams = {
-          x: msg.x as number,
-          y: msg.y as number,
-          text: msg.text as string,
-          fontSize: msg.fontSize as number | undefined,
-          fontWeight: msg.fontWeight as number | undefined,
-          fontColor: msg.fontColor as RGBAColor | undefined,
-          name: msg.name as string | undefined,
-          parentId: msg.parentId as string | undefined,
-        };
-        const result = await creationService.createText(params);
-        figma.notify("Text created successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "create_text",
-          result: result,
-        });
-        break;
-      }
-
-      // Text content commands
-      case "set_text_content": {
-        const params: SetTextContentParams = {
-          nodeId: msg.nodeId as string,
-          text: msg.text as string,
-        };
-        if (!params.nodeId || params.text === undefined) {
-          throw new Error("nodeId and text are required");
-        }
-        const result = await textService.setTextContent(params);
-        figma.notify("Text content updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_text_content",
-          result: result,
-        });
-        break;
-      }
-
-      case "scan_text_nodes": {
-        const params: ScanTextNodesParams = {
-          nodeId: msg.nodeId as string,
-          useChunking: msg.useChunking as boolean | undefined,
-          chunkSize: msg.chunkSize as number | undefined,
-          commandId: msg.commandId as string | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await textService.scanTextNodes(params);
-        figma.ui.postMessage({
-          type: "scan_text_nodes-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "set_multiple_text_contents": {
-        const params: SetMultipleTextContentsParams = {
-          nodeId: msg.nodeId as string,
-          text: msg.text as Array<{ nodeId: string; text: string }>,
-          commandId: msg.commandId as string | undefined,
-        };
-        if (!params.nodeId || !params.text) {
-          throw new Error("nodeId and text are required");
-        }
-        const result = await textService.setMultipleTextContents(params);
-        figma.ui.postMessage({
-          type: "set_multiple_text_contents-result",
-          data: result,
-        });
-        break;
-      }
-
-      // Layout commands
-      case "set_layout_mode": {
-        const params: SetLayoutModeParams = {
-          nodeId: msg.nodeId as string,
-          layoutMode: msg.layoutMode as LayoutMode,
-          layoutWrap: msg.layoutWrap as LayoutWrap | undefined,
-        };
-        if (!params.nodeId || !params.layoutMode) {
-          throw new Error("nodeId and layoutMode are required");
-        }
-        const result = await layoutService.setLayoutMode(params);
-        figma.notify("Layout mode updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_layout_mode",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_padding": {
-        const params: SetPaddingParams = {
-          nodeId: msg.nodeId as string,
-          paddingTop: msg.paddingTop as number | undefined,
-          paddingRight: msg.paddingRight as number | undefined,
-          paddingBottom: msg.paddingBottom as number | undefined,
-          paddingLeft: msg.paddingLeft as number | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await layoutService.setPadding(params);
-        figma.notify("Padding updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_padding",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_axis_align": {
-        const params: SetAxisAlignParams = {
-          nodeId: msg.nodeId as string,
-          primaryAxisAlignItems: msg.primaryAxisAlignItems as
-            | PrimaryAxisAlign
-            | undefined,
-          counterAxisAlignItems: msg.counterAxisAlignItems as
-            | CounterAxisAlign
-            | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await layoutService.setAxisAlign(params);
-        figma.notify("Axis alignment updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_axis_align",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_layout_sizing": {
-        const params: SetLayoutSizingParams = {
-          nodeId: msg.nodeId as string,
-          layoutSizingHorizontal: msg.layoutSizingHorizontal as
-            | LayoutSizing
-            | undefined,
-          layoutSizingVertical: msg.layoutSizingVertical as
-            | LayoutSizing
-            | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await layoutService.setLayoutSizing(params);
-        figma.notify("Layout sizing updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_layout_sizing",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_item_spacing": {
-        const params: SetItemSpacingParams = {
-          nodeId: msg.nodeId as string,
-          itemSpacing: msg.itemSpacing as number,
-        };
-        if (!params.nodeId || params.itemSpacing === undefined) {
-          throw new Error("nodeId and itemSpacing are required");
-        }
-        const result = await layoutService.setItemSpacing(params);
-        figma.notify("Item spacing updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_item_spacing",
-          result: result,
-        });
-        break;
-      }
-
-      // Styling commands
-      case "set_fill_color": {
-        const params: SetFillColorParams = {
-          nodeId: msg.nodeId as string,
-          color: {
-            r: msg.r as number,
-            g: msg.g as number,
-            b: msg.b as number,
-            a: msg.a as number | undefined
-          } as RGBAColor,
-        };
-        if (!params.nodeId || params.color.r === undefined || params.color.g === undefined || params.color.b === undefined) {
-          throw new Error("nodeId and color (r, g, b) are required");
-        }
-        console.log("🎨 Setting fill color:", params);
-        const result = await styleService.setFillColor(params);
-        figma.notify("Fill color updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_fill_color",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_stroke_color": {
-        const params: SetStrokeColorParams = {
-          nodeId: msg.nodeId as string,
-          color: {
-            r: msg.r as number,
-            g: msg.g as number,
-            b: msg.b as number,
-            a: msg.a as number | undefined
-          } as RGBAColor,
-          weight: msg.weight as number | undefined,
-        };
-        if (!params.nodeId || params.color.r === undefined || params.color.g === undefined || params.color.b === undefined) {
-          throw new Error("nodeId and color (r, g, b) are required");
-        }
-        console.log("🎨 Setting stroke color:", params);
-        const result = await styleService.setStrokeColor(params);
-        figma.notify("Stroke color updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_stroke_color",
-          result: result,
-        });
-        break;
-      }
-
-      case "set_corner_radius": {
-        const params: SetCornerRadiusParams = {
-          nodeId: msg.nodeId as string,
-          radius: msg.radius as number,
-          corners: msg.corners as boolean[] | undefined,
-        };
-        if (!params.nodeId || params.radius === undefined) {
-          throw new Error("nodeId and radius are required");
-        }
-        const result = await styleService.setCornerRadius(params);
-        figma.notify("Corner radius updated successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "set_corner_radius",
-          result: result,
-        });
-        break;
-      }
-
-      // Layout Management commands
-      case "move_node": {
-        const params: MoveNodeParams = {
-          nodeId: msg.nodeId as string,
-          x: msg.x as number,
-          y: msg.y as number,
-        };
-        if (!params.nodeId || params.x === undefined || params.y === undefined) {
-          throw new Error("nodeId, x, and y are required");
-        }
-        const result = await layoutManagementService.moveNode(params);
-        figma.notify("Node moved successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "move_node",
-          result: result,
-        });
-        break;
-      }
-
-      case "resize_node": {
-        const params: ResizeNodeParams = {
-          nodeId: msg.nodeId as string,
-          width: msg.width as number,
-          height: msg.height as number,
-        };
-        if (!params.nodeId || params.width === undefined || params.height === undefined) {
-          throw new Error("nodeId, width, and height are required");
-        }
-        const result = await layoutManagementService.resizeNode(params);
-        figma.notify("Node resized successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "resize_node",
-          result: result,
-        });
-        break;
-      }
-
-      case "delete_node": {
-        const params: DeleteNodeParams = {
-          nodeId: msg.nodeId as string,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await layoutManagementService.deleteNode(params);
-        figma.notify("Node deleted successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "delete_node",
-          result: result,
-        });
-        break;
-      }
-
-      case "delete_multiple_nodes": {
-        const params: DeleteMultipleNodesParams = {
-          nodeIds: msg.nodeIds as string[],
-        };
-        if (!params.nodeIds || !Array.isArray(params.nodeIds)) {
-          throw new Error("nodeIds array is required");
-        }
-        const result = await layoutManagementService.deleteMultipleNodes(params);
-        figma.notify(`Deleted ${result.deletedCount} nodes successfully`);
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "delete_multiple_nodes",
-          result: result,
-        });
-        break;
-      }
-
-      case "clone_node": {
-        const params: CloneNodeParams = {
-          nodeId: msg.nodeId as string,
-          x: msg.x as number | undefined,
-          y: msg.y as number | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await layoutManagementService.cloneNode(params);
-        figma.notify("Node cloned successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "clone_node",
-          result: result,
-        });
-        break;
-      }
-
-      // Component & Style commands
-      case "get_styles": {
-        console.log("🎨 Getting styles...");
-        const result = await componentService.getStyles();
-        console.log("🎨 Styles result:", result);
-        console.log(`🎨 Found ${result.length} styles:`, result.map(s => `${s.name} (${s.type})`));
-        figma.notify(`Found ${result.length} styles`);
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_styles",
-          result: result,
-        });
-        break;
-      }
-
-      case "get_local_components": {
-        const result = await componentService.getLocalComponents();
-        figma.notify(`Found ${result.length} local components`);
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "get_local_components",
-          result: result,
-        });
-        break;
-      }
-
-      case "create_component_instance": {
-        const params: CreateComponentInstanceParams = {
-          componentKey: msg.componentKey as string,
-          x: msg.x as number,
-          y: msg.y as number,
-        };
-        if (!params.componentKey || params.x === undefined || params.y === undefined) {
-          throw new Error("componentKey, x, and y are required");
-        }
-        const result = await componentService.createComponentInstance(params);
-        figma.notify("Component instance created successfully");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "create_component_instance",
-          result: result,
-        });
-        break;
-      }
-
-      case "get_instance_overrides": {
-        const params: GetInstanceOverridesParams = {
-          nodeId: msg.nodeId as string | undefined,
-        };
-        const result = await componentService.getInstanceOverrides(params);
-        figma.ui.postMessage({
-          type: "get_instance_overrides-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "set_instance_overrides": {
-        const params: SetInstanceOverridesParams = {
-          sourceInstanceId: msg.sourceInstanceId as string,
-          targetNodeIds: msg.targetNodeIds as string[],
-        };
-        if (!params.sourceInstanceId || !params.targetNodeIds) {
-          throw new Error("sourceInstanceId and targetNodeIds are required");
-        }
-        const result = await componentService.setInstanceOverrides(params);
-        figma.ui.postMessage({
-          type: "set_instance_overrides-result",
-          data: result,
-        });
-        break;
-      }
-
-      case "export_node_as_image": {
-        const params: ExportNodeParams = {
-          nodeId: msg.nodeId as string,
-          format: msg.format as ExportFormat | undefined,
-          scale: msg.scale as number | undefined,
-        };
-        if (!params.nodeId) {
-          throw new Error("nodeId is required");
-        }
-        const result = await componentService.exportNodeAsImage(params);
-        figma.notify(result.success ? "Node exported successfully" : "Export failed");
-        figma.ui.postMessage({
-          type: "command_result",
-          command: "export_node_as_image",
-          result: result,
-        });
-        break;
-      }
-
-      case "close":
-        figma.closePlugin();
-        break;
-
-      default:
-        console.warn("Unknown message type:", msg.type);
+  // Handle execute-command type - extract the actual command
+  let commandToExecute = msg.type;
+  let paramsToUse: Record<string, unknown> = msg;
+  let commandId = msg.id as string | undefined;
+  
+  if (msg.type === "execute-command") {
+    commandToExecute = msg.command as string;
+    paramsToUse = (msg.params as Record<string, unknown>) || {};
+    commandId = msg.webSocketCommandId as string;
+    
+    if (!commandToExecute) {
+      throw new Error("Missing command parameter in execute-command message");
     }
-  } catch (error) {
-    console.error("Error handling message:", error);
-    figma.notify(`Error: ${error}`);
+  }
+
+  try {
+    // Execute command using the common function
+    const result = await executeCommand(commandToExecute, paramsToUse);
+    
+    console.log(`✅ Command ${commandToExecute} completed:`, result);
+    
+    // Always send result to UI (which will forward to WebSocket if needed)
     figma.ui.postMessage({
-      type: "command_error",
-      command: msg.type,
-      error: error instanceof Error ? error.message : String(error),
+      type: "command-result",
+      id: commandId,
+      command: commandToExecute,
+      result: result,
     });
+
+  } catch (error) {
+    console.error(`❌ Error executing command ${commandToExecute}:`, error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Always send error to UI (which will forward to WebSocket if needed)
+    figma.ui.postMessage({
+      type: "command-error",
+      id: commandId,
+      command: commandToExecute,
+      error: errorMessage,
+    });
+    
+    figma.notify(`Error: ${errorMessage}`);
   }
 };
+
+
 
 // Send ready signal
 figma.ui.postMessage({

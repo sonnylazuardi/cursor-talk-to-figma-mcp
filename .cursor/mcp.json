@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "TalkToFigma": {
+      "command": "bun",
+      "args": [
+        "run",
+        "/Users/jude.park/Sites/cursor-talk-to-figma-mcp/dist/server.js"
+      ]
+    }
+  }
+}
