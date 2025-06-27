@@ -120,17 +120,30 @@ git clone https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp.git
 # Enter project directory
 cd cursor-talk-to-figma-mcp
 
-# Open in Cursor
-cursor .
 ```
 
 ### Step 3B: Follow README Setup
 
-**📖 IMPORTANT**: Once Cursor opens with the project, open the `@readme.md` file and follow the "Get Started" section exactly as written there. The readme contains the authoritative setup instructions for this project.
+**📖 IMPORTANT**: open the `readme.md` file and follow the "Get Started" section exactly as written there. The readme contains the authoritative setup instructions for this project.
 
 **In Cursor, ask the AI:**
 ```
-Please read the @readme.md file and help me set up this project by following the "Get Started" section step by step.
+Please read the @readme.md file and help me set up this project by following the installation instructions step by step.
+
+For each step in the setup process, please:
+1. Create a Mermaid flowchart showing the complete installation process
+2. Highlight which step we're currently on
+3. Show what steps are completed, current, and upcoming
+4. Include brief descriptions of what each step does
+5. Update the diagram as we progress through each step
+
+Use this Mermaid template structure:
+- Use different colors/styles to show: ✅ Completed, 🔄 Current, ⏳ Upcoming
+- Include step numbers and brief descriptions
+- Show the flow from Prerequisites → Installation → Configuration → Testing
+- Make it visually clear where we are in the process
+
+This will help me understand the overall progress and what comes next at each stage.
 ```
 
 **Continue to Step 4 (Common Steps) below.**
@@ -159,6 +172,23 @@ sleep 15
 1. Open Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux)
 2. Search "MCP"
 3. Confirm "TalkToFigma" shows as "Connected"
+
+### 📊 Optional: Visual Progress Tracking
+
+**For enhanced setup experience, ask Cursor AI:**
+```
+Please create a Mermaid diagram showing our current progress in the Cursor-Figma MCP setup process. 
+
+Show these main phases:
+1. ✅ Prerequisites Check (Completed)
+2. ✅ Installation & Setup (Completed) 
+3. 🔄 Cursor MCP Connection (Current)
+4. ⏳ WebSocket Server Start (Next)
+5. ⏳ Figma Plugin Install (Upcoming)
+6. ⏳ Testing & Verification (Final)
+
+Mark our current step clearly and indicate what verification checks we need to pass before moving to the next phase.
+```
 
 ## 🌐 Step 5: Start WebSocket Server
 
@@ -196,12 +226,47 @@ bun socket
 - **Community Plugin**: https://www.figma.com/community/plugin/1485687494525374295/cursor-talk-to-figma-mcp-plugin
 - **Local Plugin**: In Figma > Plugins > Development > New Plugin > Link existing plugin > Select manifest.json from your project directory
 
+### 📊 Progress Update
+
+**Ask Cursor AI to update the progress:**
+```
+Please update the Mermaid progress diagram to show that we've reached the Figma Plugin installation phase:
+
+1. ✅ Prerequisites Check (Completed)
+2. ✅ Installation & Setup (Completed) 
+3. ✅ Cursor MCP Connection (Completed)
+4. ✅ WebSocket Server Start (Completed)
+5. 🔄 Figma Plugin Install (Current)
+6. ⏳ Testing & Verification (Final)
+
+Include brief instructions for plugin installation options and what comes next.
+```
+
 ### Step 7: Test Everything Works
 
 **In Cursor (where MCP is connected):**
 
 1. Test MCP: `join_channel` → Should see "Successfully joined channel"
 2. Test Figma: `get_document_info` → Should see JSON data from Figma
+
+### 🎉 Final Progress & Celebration
+
+**Ask Cursor AI to show completion:**
+```
+Please create a final Mermaid diagram showing successful completion of the entire setup:
+
+1. ✅ Prerequisites Check (Completed)
+2. ✅ Installation & Setup (Completed) 
+3. ✅ Cursor MCP Connection (Completed)
+4. ✅ WebSocket Server Start (Completed)
+5. ✅ Figma Plugin Install (Completed)
+6. ✅ Testing & Verification (Completed ✨)
+
+Add a success message and show the communication flow: 
+Cursor AI ↔ MCP Server ↔ WebSocket ↔ Figma Plugin ↔ Figma
+
+Also provide a quick reference of the main commands I can now use to interact with Figma.
+```
 
 **✅ If both commands work, setup is complete!**
 
@@ -337,6 +402,21 @@ mkdir -p ~/Sites && cd ~/Sites && git clone https://github.com/sonnylazuardi/cur
 
 # One-liner for Method B (no sudo)
 mkdir -p ~/Documents/cursor-workspace && cd ~/Documents/cursor-workspace && git clone https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp.git && cd cursor-talk-to-figma-mcp && cursor .
+```
+
+### 📊 Quick Setup with Visual Progress
+
+**After running the one-liner, ask Cursor AI:**
+```
+I just ran the quick setup command for Cursor-Figma MCP. Please create a Mermaid diagram showing the current setup progress and guide me through the remaining steps with visual progress tracking at each stage.
+
+Start by showing:
+- What the one-liner accomplished
+- Current status of each setup phase  
+- Next steps needed to complete the installation
+- Expected verification points
+
+Update the diagram as we complete each remaining step.
 ```
 
 ### After Setup - Start Services
