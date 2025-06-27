@@ -430,7 +430,8 @@ export interface SetLayoutSizingParams extends BaseNodeParams {
 }
 
 export interface SetItemSpacingParams extends BaseNodeParams {
-  itemSpacing: number;
+  itemSpacing?: number;
+  counterAxisSpacing?: number;
 }
 
 // === Additional Missing Types ===

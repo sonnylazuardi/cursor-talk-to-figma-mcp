@@ -185,16 +185,12 @@ async function executeCommand(command: string, params: Record<string, unknown>):
     case "set_fill_color": {
       const fillParams = {
         nodeId: params.nodeId as string,
-        color: {
-          r: params.r as number,
-          g: params.g as number,
-          b: params.b as number,
-          a: params.a as number | undefined
-        } as RGBAColor,
+        color: params.color as RGBAColor,
       };
-      if (!fillParams.nodeId || fillParams.color.r === undefined || 
-          fillParams.color.g === undefined || fillParams.color.b === undefined) {
-        throw new Error("Missing required parameters: nodeId, r, g, b");
+      if (!fillParams.nodeId || !fillParams.color || 
+          fillParams.color.r === undefined || fillParams.color.g === undefined || 
+          fillParams.color.b === undefined) {
+        throw new Error("Missing required parameters: nodeId, color with r, g, b values");
       }
       return await styleService.setFillColor(fillParams);
     }
@@ -202,17 +198,13 @@ async function executeCommand(command: string, params: Record<string, unknown>):
     case "set_stroke_color": {
       const strokeParams = {
         nodeId: params.nodeId as string,
-        color: {
-          r: params.r as number,
-          g: params.g as number,
-          b: params.b as number,
-          a: params.a as number | undefined
-        } as RGBAColor,
+        color: params.color as RGBAColor,
         weight: params.weight as number | undefined,
       };
-      if (!strokeParams.nodeId || strokeParams.color.r === undefined || 
-          strokeParams.color.g === undefined || strokeParams.color.b === undefined) {
-        throw new Error("Missing required parameters: nodeId, r, g, b");
+      if (!strokeParams.nodeId || !strokeParams.color || 
+          strokeParams.color.r === undefined || strokeParams.color.g === undefined || 
+          strokeParams.color.b === undefined) {
+        throw new Error("Missing required parameters: nodeId, color with r, g, b values");
       }
       return await styleService.setStrokeColor(strokeParams);
     }
@@ -340,10 +332,14 @@ async function executeCommand(command: string, params: Record<string, unknown>):
       case "set_item_spacing": {
       const itemSpacingParams: SetItemSpacingParams = {
         nodeId: params.nodeId as string,
-        itemSpacing: params.itemSpacing as number,
+        itemSpacing: params.itemSpacing as number | undefined,
+        counterAxisSpacing: params.counterAxisSpacing as number | undefined,
       };
-      if (!itemSpacingParams.nodeId || itemSpacingParams.itemSpacing === undefined) {
-        throw new Error("Missing required parameters: nodeId, itemSpacing");
+      if (!itemSpacingParams.nodeId) {
+        throw new Error("Missing required parameter: nodeId");
+      }
+      if (itemSpacingParams.itemSpacing === undefined && itemSpacingParams.counterAxisSpacing === undefined) {
+        throw new Error("At least one of itemSpacing or counterAxisSpacing must be provided");
       }
       return await layoutService.setItemSpacing(itemSpacingParams);
     }

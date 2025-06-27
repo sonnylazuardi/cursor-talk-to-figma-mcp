@@ -15,11 +15,11 @@ export class PrototypeService {
    * @param nodeIds - Array of node IDs to check for reactions
    * @returns Promise with reaction data
    */
-  async getReactions(nodeIds: string[]): Promise<GetReactionsResult> {
+     async getReactions(nodeIds: string[]): Promise<GetReactionsResult> {
     // Use chunked progress for processing multiple nodes
     const allResults = await withChunkedProgress(
       generateCommandId(),
-      "get_reactions",
+        "get_reactions",
       nodeIds,
       5, // Process 5 nodes per chunk
       `Starting deep search for reactions in ${nodeIds.length} nodes and their children`,
@@ -28,36 +28,36 @@ export class PrototypeService {
          const chunkResults: ReactionNode[] = [];
         
         for (const nodeId of chunk) {
-          try {
-            const node = await figma.getNodeByIdAsync(nodeId);
-            
-            if (!node) {
+        try {
+          const node = await figma.getNodeByIdAsync(nodeId);
+          
+                     if (!node) {
               console.log(`Node not found: ${nodeId}`);
-              continue;
-            }
-            
-            // Search for reactions in the node and its children
-            const processedNodes = new Set<string>();
+             continue;
+           }
+           
+           // Search for reactions in the node and its children
+           const processedNodes = new Set<string>();
             const nodeResults = await this.findNodesWithReactions(node as SceneNode, processedNodes);
             chunkResults.push(...nodeResults);
-            
+           
             // Small delay to prevent UI freezing
             await delay(10);
             
-          } catch (error) {
+         } catch (error) {
             console.error(`Error processing node ${nodeId}:`, error);
-          }
         }
-        
+      }
+
         return chunkResults;
       }
-    );
+       );
 
-    return {
-      nodesCount: nodeIds.length,
-      nodesWithReactions: allResults.length,
-      nodes: allResults
-    };
+      return {
+        nodesCount: nodeIds.length,
+        nodesWithReactions: allResults.length,
+        nodes: allResults
+      };
   }
 
   /**
@@ -65,7 +65,7 @@ export class PrototypeService {
    * @param connectorId - Optional connector ID to set as default
    * @returns Promise with success status
    */
-  async setDefaultConnector(connectorId?: string): Promise<SetDefaultConnectorResult> {
+     async setDefaultConnector(connectorId?: string): Promise<SetDefaultConnectorResult> {
     // This is a simple operation that doesn't need progress tracking
     if (connectorId) {
       // Get node by specified ID
@@ -160,11 +160,11 @@ export class PrototypeService {
    * @param connections - Array of connection objects with start/end node IDs and optional text
    * @returns Promise with created connections data
    */
-  async createConnections(connections: Array<{
-    startNodeId: string;
-    endNodeId: string;
-    text?: string;
-  }>): Promise<CreateConnectionsResult> {
+     async createConnections(connections: Array<{
+     startNodeId: string;
+     endNodeId: string;
+     text?: string;
+   }>): Promise<CreateConnectionsResult> {
     if (!connections || !Array.isArray(connections)) {
       throw new Error('Missing or invalid connections parameter');
     }
@@ -198,63 +198,63 @@ export class PrototypeService {
          const chunkResults: ConnectionResult[] = [];
         
         for (const connection of chunk) {
-          try {
+      try {
             const { startNodeId, endNodeId, text } = connection;
-            
-            const startNode = await figma.getNodeByIdAsync(startNodeId);
-            if (!startNode) throw new Error(`Start node not found with ID: ${startNodeId}`);
-            
-            const endNode = await figma.getNodeByIdAsync(endNodeId);
-            if (!endNode) throw new Error(`End node not found with ID: ${endNodeId}`);
-            
-            // Clone the default connector
-            const clonedConnector = defaultConnector.clone();
-            
-            // Update connector name
-            clonedConnector.name = `TTF_Connector/${startNode.id}/${endNode.id}`;
-            
-            // Set start and end points
-            if ('connectorStart' in clonedConnector && 'connectorEnd' in clonedConnector) {
-              clonedConnector.connectorStart = {
-                endpointNodeId: startNodeId,
-                magnet: 'AUTO'
-              };
-              
-              clonedConnector.connectorEnd = {
-                endpointNodeId: endNodeId,
-                magnet: 'AUTO'
-              };
-            }
-            
-            // Add text if provided
-            if (text && 'text' in clonedConnector && clonedConnector.text) {
-              try {
-                // Try to load Inter font
-                await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-                clonedConnector.text.characters = text;
-              } catch (textError) {
-                console.error("Error setting text:", textError);
-                // Continue with connection even if text setting fails
-              }
-            }
-            
-            // Add to results
+        
+        const startNode = await figma.getNodeByIdAsync(startNodeId);
+        if (!startNode) throw new Error(`Start node not found with ID: ${startNodeId}`);
+        
+        const endNode = await figma.getNodeByIdAsync(endNodeId);
+        if (!endNode) throw new Error(`End node not found with ID: ${endNodeId}`);
+        
+        // Clone the default connector
+        const clonedConnector = defaultConnector.clone();
+        
+        // Update connector name
+        clonedConnector.name = `TTF_Connector/${startNode.id}/${endNode.id}`;
+        
+        // Set start and end points
+        if ('connectorStart' in clonedConnector && 'connectorEnd' in clonedConnector) {
+          clonedConnector.connectorStart = {
+            endpointNodeId: startNodeId,
+            magnet: 'AUTO'
+          };
+          
+          clonedConnector.connectorEnd = {
+            endpointNodeId: endNodeId,
+            magnet: 'AUTO'
+          };
+        }
+        
+        // Add text if provided
+        if (text && 'text' in clonedConnector && clonedConnector.text) {
+          try {
+            // Try to load Inter font
+            await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+            clonedConnector.text.characters = text;
+          } catch (textError) {
+            console.error("Error setting text:", textError);
+            // Continue with connection even if text setting fails
+          }
+        }
+        
+        // Add to results
             chunkResults.push({
-              id: clonedConnector.id,
-              startNodeId: startNodeId,
-              endNodeId: endNodeId,
-              text: text || ""
-            });
-            
-          } catch (error) {
-            console.error("Error creating connection", error);
+          id: clonedConnector.id,
+          startNodeId: startNodeId,
+          endNodeId: endNodeId,
+          text: text || ""
+        });
+         
+       } catch (error) {
+         console.error("Error creating connection", error);
             chunkResults.push({
               startNodeId: connection.startNodeId,
               endNodeId: connection.endNodeId,
               text: connection.text,
-              error: error instanceof Error ? error.message : String(error)
-            });
-          }
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
           
           // Small delay between connections
           await delay(5);
@@ -262,7 +262,7 @@ export class PrototypeService {
         
         return chunkResults;
       }
-    );
+     );
     
     figma.notify(`Created ${results.filter(r => !r.error).length} connections`);
     

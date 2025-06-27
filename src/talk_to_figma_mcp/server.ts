@@ -2232,21 +2232,27 @@ server.tool(
   "Set distance between children in an auto-layout frame",
   {
     nodeId: z.string().describe("The ID of the frame to modify"),
-    itemSpacing: z.number().describe("Distance between children. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN.")
+    itemSpacing: z.number().optional().describe("Distance between children. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN."),
+    counterAxisSpacing: z.number().optional().describe("Distance between wrapped rows/columns. Only works when layoutWrap is set to WRAP.")
   },
-  async ({ nodeId, itemSpacing }) => {
+  async ({ nodeId, itemSpacing, counterAxisSpacing }) => {
     try {
-      const result = await sendCommandToFigma("set_item_spacing", {
-        nodeId,
-        itemSpacing
-      });
-      const typedResult = result as { name: string };
+      const params: any = { nodeId };
+      if (itemSpacing !== undefined) params.itemSpacing = itemSpacing;
+      if (counterAxisSpacing !== undefined) params.counterAxisSpacing = counterAxisSpacing;
+      
+      const result = await sendCommandToFigma("set_item_spacing", params);
+      const typedResult = result as { name: string, itemSpacing?: number, counterAxisSpacing?: number };
+
+      let message = `Updated spacing for frame "${typedResult.name}":`;
+      if (itemSpacing !== undefined) message += ` itemSpacing=${itemSpacing}`;
+      if (counterAxisSpacing !== undefined) message += ` counterAxisSpacing=${counterAxisSpacing}`;
 
       return {
         content: [
           {
             type: "text",
-            text: `Set item spacing to ${itemSpacing} for frame "${typedResult.name}"`,
+            text: message,
           },
         ],
       };
@@ -2255,7 +2261,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `Error setting item spacing: ${error instanceof Error ? error.message : String(error)}`,
+            text: `Error setting spacing: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
       };
