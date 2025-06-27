@@ -18,9 +18,9 @@
     "setup": "./scripts/setup.sh",
     "build": "tsup && bun run build:figma-plugin",
     "build:watch": "tsup --watch",
-    "build:figma-plugin": "cd src/figma-plugin-simple && bun run build",
-    "dev": "bun run build:watch",
-    "dev:figma-plugin": "cd src/figma-plugin-simple && bun run build",
+    "build:figma-plugin": "cd src/figma-plugin && bun run build",
+    "dev": "bun run build:watch && bun run dev:figma-plugin",
+    "dev:figma-plugin": "cd src/figma-plugin && bun run dev",
     "pub:release": "bun run build && npm publish",
     "test:types": "bun test tests/"
   },
