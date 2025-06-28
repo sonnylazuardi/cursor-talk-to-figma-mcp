@@ -15,4 +15,5 @@ build/
 coverage/
 /docs
 websocket.log
-/.cursor/rules
+.cursor/
+.vscode/
