@@ -14,3 +14,4 @@ dist/
 build/
 coverage/
 /docs
+websocket.log
