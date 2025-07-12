@@ -1,0 +1,41 @@
+// Remove external font import to prevent CSP violations
+// @import "./font-face";
+
+:root {
+  --input-button-height: 44px;
+  --input-button-radius: 6px;
+
+  --color-primary: #333;
+  --color-secondary: #30775d;
+  --color-white: #fff;
+  --color-background: #f5ffb7;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  overflow-x: hidden;
+  // Use system font stack instead of external Inter font
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  margin: 0;
+
+  // Hide scrollbar
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  // Change selection color
+  ::selection {
+    background: var(--color-secondary);
+    color: var(--color-white);
+  }
+}

@@ -1,0 +1,439 @@
+// Main container styles
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  color: #e0e0e0;
+  background-color: #1e1e1e;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+// Header styles
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.headerLogo {
+  padding: 16px;
+  border-radius: 16px;
+  background-color: #333;
+}
+
+.headerLogoImage {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.headerText {
+  margin-left: 12px;
+
+  h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  p {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: #999999;
+  }
+}
+
+// Tabs styles
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #444444;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #999999;
+
+  &.active {
+    border-bottom: 2px solid #18a0fb;
+    color: #18a0fb;
+  }
+}
+
+// Tab content
+.tabContent {
+  display: block;
+  flex: 1;
+  overflow-y: auto;
+  background-color: #1e1e1e;
+  min-height: 0;
+}
+
+// Settings page specific styles
+.settingsContainer {
+  background-color: #1e1e1e;
+  padding-right: 4px;
+  margin-top: 12px;
+}
+
+// Section styles
+.section {
+  margin-bottom: 24px;
+}
+
+// Accordion styles
+.accordion {
+  margin-bottom: 12px;
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #2d2d2d;
+  border: 1px solid #444444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+
+  &:hover {
+    background-color: #3d3d3d;
+    border-color: #555555;
+  }
+
+  &.active {
+    background-color: #1a3147;
+    border-color: #18a0fb;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+  }
+}
+
+.accordionIcon {
+  margin-right: 8px;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  color: #18a0fb;
+  
+  &.expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.accordionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.accordionContent {
+  padding: 20px;
+  background-color: #252525;
+  border: 1px solid #18a0fb;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.inputSection {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #333333;
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+// Form elements
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  
+  input {
+    flex: 1;
+    margin-bottom: 0;
+    min-width: 120px;
+  }
+  
+  button {
+    margin-top: 0;
+    margin-bottom: 0;
+    flex-shrink: 0;
+    height: 36px;
+    padding: 8px 16px;
+    white-space: nowrap;
+  }
+}
+
+input {
+  border: 1px solid #444444;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  height: 36px;
+  box-sizing: border-box;
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+  transition: border-color 0.2s ease;
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: #18a0fb;
+  }
+
+  &:disabled {
+    background-color: #333333;
+    color: #666666;
+    cursor: not-allowed;
+  }
+}
+
+// Grid input layouts
+.gridInput2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gridInput3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gridInput4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gridInputManage {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Button styles
+button {
+  background-color: #18a0fb;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  min-width: fit-content;
+
+  &:hover {
+    background-color: #0d8ee0;
+    transform: translateY(-1px);
+  }
+
+  &.primary {
+    background-color: #18a0fb;
+    
+    &:hover {
+      background-color: #0d8ee0;
+    }
+  }
+
+  &.secondary {
+    background-color: #3d3d3d;
+    color: #e0e0e0;
+
+    &:hover {
+      background-color: #4d4d4d;
+    }
+  }
+
+  &:disabled {
+    background-color: #333333;
+    color: #666666;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// Status styles
+.status {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  word-break: break-word;
+
+  &.connected {
+    background-color: #1a472a;
+    color: #4ade80;
+  }
+
+  &.disconnected {
+    background-color: #471a1a;
+    color: #ff9999;
+  }
+
+  &.info {
+    background-color: #1a3147;
+    color: #66b3ff;
+  }
+}
+
+// Progress styles
+.progressMessage {
+  margin-bottom: 8px;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.progressBarContainer {
+  width: 100%;
+  background-color: #444;
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 8px;
+  background-color: #18a0fb;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progressInfo {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.progressStatus {
+  &.completed {
+    color: #4ade80;
+  }
+
+  &.error {
+    color: #ff9999;
+  }
+}
+
+.progressPercentage {
+  color: #cccccc;
+}
+
+// Typography
+h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+p {
+  margin-bottom: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+ol {
+  padding-left: 20px;
+  
+  li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+}
+
+// Link styles
+.link {
+  color: #18a0fb;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

@@ -18,8 +18,12 @@
     "setup": "./scripts/setup.sh",
     "build": "tsup",
     "build:watch": "tsup --watch",
+    "build:figma-plugin": "cd src/figma-plugin && bun run build",
     "dev": "bun run build:watch",
-    "pub:release": "bun run build && npm publish"
+    "dev:figma-plugin": "cd src/figma-plugin && bun run dev",
+    "postinstall": "cd src/figma-plugin && bun install",
+    "pub:release": "bun run build && npm publish",
+    "test:types": "bun test tests/"
   },
   "devDependencies": {
     "@types/bun": "latest",
