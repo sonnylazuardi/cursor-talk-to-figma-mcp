@@ -9,8 +9,12 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": "src",
     "lib": ["ES2022"],
-    "types": ["bun-types"]
+    "types": ["bun-types"],
+    "paths": {
+      "@/types/*": ["talk_to_figma_mcp/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
