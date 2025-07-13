@@ -3480,7 +3480,12 @@ async function setLayoutSizing(params) {
 }
 
 async function setItemSpacing(params) {
-  const { nodeId, itemSpacing } = params || {};
+  const { nodeId, itemSpacing, counterAxisSpacing } = params || {};
+
+  // Validate that at least one spacing parameter is provided
+  if (itemSpacing === undefined && counterAxisSpacing === undefined) {
+    throw new Error("At least one of itemSpacing or counterAxisSpacing must be provided");
+  }
 
   // Get the target node
   const node = await figma.getNodeByIdAsync(nodeId);
@@ -3488,24 +3493,24 @@ async function setItemSpacing(params) {
     throw new Error(`Node with ID ${nodeId} not found`);
   }
 
-  // Check if node is a frame or component that supports item spacing
+  // Check if node is a frame or component that supports spacing
   if (
     node.type !== "FRAME" &&
     node.type !== "COMPONENT" &&
     node.type !== "COMPONENT_SET" &&
     node.type !== "INSTANCE"
   ) {
-    throw new Error(`Node type ${node.type} does not support item spacing`);
+    throw new Error(`Node type ${node.type} does not support spacing`);
   }
 
   // Check if the node has auto-layout enabled
   if (node.layoutMode === "NONE") {
     throw new Error(
-      "Item spacing can only be set on auto-layout frames (layoutMode must not be NONE)"
+      "Spacing can only be set on auto-layout frames (layoutMode must not be NONE)"
     );
   }
 
-  // Set item spacing
+  // Set item spacing if provided
   if (itemSpacing !== undefined) {
     if (typeof itemSpacing !== "number") {
       throw new Error("Item spacing must be a number");
@@ -3513,11 +3518,27 @@ async function setItemSpacing(params) {
     node.itemSpacing = itemSpacing;
   }
 
+  // Set counter axis spacing if provided
+  if (counterAxisSpacing !== undefined) {
+    if (typeof counterAxisSpacing !== "number") {
+      throw new Error("Counter axis spacing must be a number");
+    }
+    // Check if layoutWrap is enabled (counterAxisSpacing only works with WRAP)
+    if (node.layoutWrap !== "WRAP") {
+      throw new Error(
+        "Counter axis spacing can only be set on frames with layoutWrap set to WRAP"
+      );
+    }
+    node.counterAxisSpacing = counterAxisSpacing;
+  }
+
   return {
     id: node.id,
     name: node.name,
-    itemSpacing: node.itemSpacing,
+    itemSpacing: node.itemSpacing || undefined,
+    counterAxisSpacing: node.counterAxisSpacing || undefined,
     layoutMode: node.layoutMode,
+    layoutWrap: node.layoutWrap,
   };
 }
 
