@@ -20,7 +20,7 @@ import {
   RGBAColor,
   NodeInfo,
   PluginState
-} from "../types/types.js";
+} from "@/types/types.js";
 
 // Custom logging functions that write to stderr instead of stdout to avoid being captured
 const logger = {
