@@ -27,7 +27,7 @@
       "@/utils/*": ["src/utils/*"],
       "@/services/*": ["src/services/*"],
       "@/components/*": ["src/app/components/*"],
-      "@/types/*": ["../types/*"]
+      "@/types/*": ["../talk_to_figma_mcp/*"]
     },
     "typeRoots": [
       "./node_modules/@types",

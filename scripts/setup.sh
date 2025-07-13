@@ -5,6 +5,11 @@ mkdir -p .cursor
 
 bun install
 
+# Install dependencies for figma plugin
+cd src/figma-plugin
+bun install
+cd ../..
+
 # Create mcp.json with the current directory path
 echo "{
   \"mcpServers\": {
@@ -16,3 +21,4 @@ echo "{
     }
   }
 }" > .cursor/mcp.json 
+
