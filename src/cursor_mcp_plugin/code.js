@@ -1195,41 +1195,41 @@ async function createComponentInstance(params) {
     let component = null;
     let componentSource = "unknown";
     
-    console.log(`🔍 Searching for component with key: ${componentKey}`);
+    console.log(`Searching for component with key: ${componentKey}`);
     
     // Try to find component in local components first
-    console.log("📁 Checking local components...");
+    console.log("Checking local components...");
     
     // Load all pages first to ensure we can search all components
-    console.log("📄 Loading all pages...");
+    console.log("Loading all pages...");
     await figma.loadAllPagesAsync();
     
     const localComponents = figma.root.findAllWithCriteria({
       types: ['COMPONENT']
     });
     
-    console.log(`📊 Found ${localComponents.length} local components`);
+    console.log(`Found ${localComponents.length} local components`);
     
     for (const localComponent of localComponents) {
       if (localComponent.key === componentKey) {
         component = localComponent;
         componentSource = "local";
-        console.log(`✅ Found local component: "${localComponent.name}"`);
+        console.log(`Found local component: "${localComponent.name}"`);
         break;
       }
     }
     
     // If not found locally, try to import from team library
     if (!component) {
-      console.log("📚 Local component not found, trying team library...");
+      console.log("Local component not found, trying team library...");
       try {
         component = await figma.importComponentByKeyAsync(componentKey);
         if (component) {
           componentSource = "team_library";
-          console.log(`✅ Successfully imported from team library: "${component.name}"`);
+          console.log(`Successfully imported from team library: "${component.name}"`);
         }
       } catch (importError) {
-        console.error(`❌ Failed to import from team library:`, importError);
+        console.error(`Failed to import from team library:`, importError);
         throw new Error(`Component not found: "${componentKey}". Searched in local components and team library.`);
       }
     }
@@ -1256,11 +1256,9 @@ async function createComponentInstance(params) {
       width: instance.width,
       height: instance.height,
       componentId: instance.componentId,
-      source: componentSource,
-      componentKey: componentKey
     };
   } catch (error) {
-    console.error(`❌ Error creating component instance:`, error);
+    console.error(`Error creating component instance:`, error);
     throw new Error(`Error creating component instance: ${error.message}`);
   }
 }
