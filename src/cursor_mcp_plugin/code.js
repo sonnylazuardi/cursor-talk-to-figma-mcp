@@ -104,6 +104,31 @@ function updateSettings(settings) {
 
 // Handle commands from UI
 async function handleCommand(command, params) {
+  // Add JSON parameter parsing logic for type safety
+  try {
+    // Parse top-level params if it's a JSON string
+    if (typeof params === 'string') {
+      params = safeParseJson(params, 'command params');
+    }
+    
+    // Auto-parse any string values in params object that look like JSON
+    if (params && typeof params === 'object') {
+      Object.keys(params).forEach(key => {
+        if (typeof params[key] === 'string') {
+          try {
+            params[key] = safeParseJson(params[key], key);
+          } catch (parseError) {
+            // Silently continue with original value if parsing fails
+            // This allows normal strings to pass through unchanged
+          }
+        }
+      });
+    }
+  } catch (parseError) {
+    console.warn("Failed to parse command params:", parseError.message);
+    // Continue with original params value
+  }
+
   switch (command) {
     case "get_document_info":
       return await getDocumentInfo();
@@ -1167,7 +1192,55 @@ async function createComponentInstance(params) {
   }
 
   try {
-    const component = await figma.importComponentByKeyAsync(componentKey);
+    let component = null;
+    let componentSource = "unknown";
+    
+    console.log(`🔍 Searching for component with key: ${componentKey}`);
+    
+    // Try to find component in local components first
+    console.log("📁 Checking local components...");
+    
+    // Load all pages first to ensure we can search all components
+    console.log("📄 Loading all pages...");
+    await figma.loadAllPagesAsync();
+    
+    const localComponents = figma.root.findAllWithCriteria({
+      types: ['COMPONENT']
+    });
+    
+    console.log(`📊 Found ${localComponents.length} local components`);
+    
+    for (const localComponent of localComponents) {
+      if (localComponent.key === componentKey) {
+        component = localComponent;
+        componentSource = "local";
+        console.log(`✅ Found local component: "${localComponent.name}"`);
+        break;
+      }
+    }
+    
+    // If not found locally, try to import from team library
+    if (!component) {
+      console.log("📚 Local component not found, trying team library...");
+      try {
+        component = await figma.importComponentByKeyAsync(componentKey);
+        if (component) {
+          componentSource = "team_library";
+          console.log(`✅ Successfully imported from team library: "${component.name}"`);
+        }
+      } catch (importError) {
+        console.error(`❌ Failed to import from team library:`, importError);
+        throw new Error(`Component not found: "${componentKey}". Searched in local components and team library.`);
+      }
+    }
+
+    // Final validation
+    if (!component) {
+      throw new Error(`Component not found: ${componentKey}`);
+    }
+
+    // Create instance
+    console.log(`🏗️ Creating instance of "${component.name}" from ${componentSource}`);
     const instance = component.createInstance();
 
     instance.x = x;
@@ -1183,16 +1256,17 @@ async function createComponentInstance(params) {
       width: instance.width,
       height: instance.height,
       componentId: instance.componentId,
+      source: componentSource,
+      componentKey: componentKey
     };
   } catch (error) {
+    console.error(`❌ Error creating component instance:`, error);
     throw new Error(`Error creating component instance: ${error.message}`);
   }
 }
 
 async function exportNodeAsImage(params) {
-  const { nodeId, scale = 1 } = params || {};
-
-  const format = "PNG";
+  const { nodeId, format = "PNG", scale = 1 } = params || {};
 
   if (!nodeId) {
     throw new Error("Missing nodeId parameter");
@@ -1208,11 +1282,12 @@ async function exportNodeAsImage(params) {
   }
 
   try {
+    // Simple export settings - Figma API handles scale differently for different formats
     const settings = {
       format: format,
-      constraint: { type: "SCALE", value: scale },
     };
 
+    console.log(`🖼️ Exporting ${format} for node ${nodeId} with scale ${scale}`);
     const bytes = await node.exportAsync(settings);
 
     let mimeType;
@@ -1338,16 +1413,21 @@ async function setCornerRadius(params) {
     node.cornerRadius = radius;
   }
 
+  // Helper function to safely get numeric value from potentially Symbol properties
+  const safeGetRadius = (value) => {
+    if (typeof value === "number") return value;
+    if (typeof value === "symbol") return undefined;
+    return value;
+  };
+
   return {
     id: node.id,
     name: node.name,
-    cornerRadius: "cornerRadius" in node ? node.cornerRadius : undefined,
-    topLeftRadius: "topLeftRadius" in node ? node.topLeftRadius : undefined,
-    topRightRadius: "topRightRadius" in node ? node.topRightRadius : undefined,
-    bottomRightRadius:
-      "bottomRightRadius" in node ? node.bottomRightRadius : undefined,
-    bottomLeftRadius:
-      "bottomLeftRadius" in node ? node.bottomLeftRadius : undefined,
+    cornerRadius: "cornerRadius" in node ? safeGetRadius(node.cornerRadius) : undefined,
+    topLeftRadius: "topLeftRadius" in node ? safeGetRadius(node.topLeftRadius) : undefined,
+    topRightRadius: "topRightRadius" in node ? safeGetRadius(node.topRightRadius) : undefined,
+    bottomRightRadius: "bottomRightRadius" in node ? safeGetRadius(node.bottomRightRadius) : undefined,
+    bottomLeftRadius: "bottomLeftRadius" in node ? safeGetRadius(node.bottomLeftRadius) : undefined,
   };
 }
 
@@ -2354,6 +2434,22 @@ function generateCommandId() {
     Math.random().toString(36).substring(2, 15) +
     Math.random().toString(36).substring(2, 15)
   );
+}
+
+// Utility function to safely parse JSON strings
+function safeParseJson(data, paramName = 'data') {
+  if (typeof data === "string") {
+    try {
+      const parsed = JSON.parse(data);
+      console.log(`Successfully parsed ${paramName} from JSON string`);
+      return parsed;
+    } catch (parseError) {
+      const errorMsg = `Failed to parse ${paramName} JSON string: ${parseError.message}`;
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
+  return data;
 }
 
 async function getAnnotations(params) {
@@ -3480,7 +3576,12 @@ async function setLayoutSizing(params) {
 }
 
 async function setItemSpacing(params) {
-  const { nodeId, itemSpacing } = params || {};
+  const { nodeId, itemSpacing, counterAxisSpacing } = params || {};
+
+  // Validate that at least one spacing parameter is provided
+  if (itemSpacing === undefined && counterAxisSpacing === undefined) {
+    throw new Error("At least one of itemSpacing or counterAxisSpacing must be provided");
+  }
 
   // Get the target node
   const node = await figma.getNodeByIdAsync(nodeId);
@@ -3513,11 +3614,28 @@ async function setItemSpacing(params) {
     node.itemSpacing = itemSpacing;
   }
 
+  // Set counter axis spacing if provided
+  if (counterAxisSpacing !== undefined) {
+    if (typeof counterAxisSpacing !== "number") {
+      throw new Error("Counter axis spacing must be a number");
+    }
+    // Check if layoutWrap is enabled (counterAxisSpacing only works with WRAP)
+    if (node.layoutWrap !== "WRAP") {
+      throw new Error(
+        "Counter axis spacing can only be set on frames with layoutWrap set to WRAP"
+      );
+    }
+    node.counterAxisSpacing = counterAxisSpacing;
+  }
+  
+
   return {
     id: node.id,
     name: node.name,
-    itemSpacing: node.itemSpacing,
+    itemSpacing: node.itemSpacing || undefined,
+    counterAxisSpacing: node.counterAxisSpacing || undefined,
     layoutMode: node.layoutMode,
+    layoutWrap: node.layoutWrap,
   };
 }
 
