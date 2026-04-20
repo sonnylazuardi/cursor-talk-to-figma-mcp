@@ -135,6 +135,12 @@ async function handleCommand(command, params) {
       return await setFillColor(params);
     case "set_stroke_color":
       return await setStrokeColor(params);
+    case "set_gradient_fill":
+      return await setGradientFill(params);
+    case "set_drop_shadow":
+      return await setDropShadow(params);
+    case "set_layer_blur":
+      return await setLayerBlur(params);
     case "move_node":
       return await moveNode(params);
     case "resize_node":
@@ -955,6 +961,135 @@ async function setFillColor(params) {
     name: node.name,
     fills: [paintStyle],
   };
+}
+
+// ───────────────────── Gradient Fill ─────────────────────
+async function setGradientFill(params) {
+  const { nodeId, type, stops, angle = 180 } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId");
+  if (!Array.isArray(stops) || stops.length < 2)
+    throw new Error("Need at least 2 gradient stops");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (!("fills" in node)) throw new Error(`Node does not support fills: ${nodeId}`);
+
+  const typeMap = {
+    linear: "GRADIENT_LINEAR",
+    radial: "GRADIENT_RADIAL",
+    angular: "GRADIENT_ANGULAR",
+    diamond: "GRADIENT_DIAMOND",
+  };
+  const gradientType = typeMap[type] || "GRADIENT_LINEAR";
+
+  // angle (deg) → 2x3 transform matrix. 180 = top→bottom, 90 = left→right
+  const rad = ((angle - 90) * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const transform = [
+    [cos, sin, (1 - cos - sin) / 2],
+    [-sin, cos, (1 + sin - cos) / 2],
+  ];
+
+  const gradientStops = stops.map((s) => ({
+    position: parseFloat(s.position) || 0,
+    color: {
+      r: parseFloat(s.r) || 0,
+      g: parseFloat(s.g) || 0,
+      b: parseFloat(s.b) || 0,
+      a: s.a == null ? 1 : parseFloat(s.a),
+    },
+  }));
+
+  const paint = {
+    type: gradientType,
+    gradientTransform: transform,
+    gradientStops,
+  };
+
+  node.fills = [paint];
+
+  return {
+    id: node.id,
+    name: node.name,
+    fillType: gradientType,
+    stopCount: gradientStops.length,
+  };
+}
+
+// ───────────────────── Drop Shadow ─────────────────────
+async function setDropShadow(params) {
+  const {
+    nodeId,
+    offsetX = 0,
+    offsetY = 0,
+    radius = 0,
+    spread = 0,
+    color = { r: 0, g: 0, b: 0, a: 0.25 },
+    inner = false,
+  } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (!("effects" in node)) throw new Error(`Node does not support effects: ${nodeId}`);
+
+  const effect = {
+    type: inner ? "INNER_SHADOW" : "DROP_SHADOW",
+    color: {
+      r: parseFloat(color.r) || 0,
+      g: parseFloat(color.g) || 0,
+      b: parseFloat(color.b) || 0,
+      a: color.a == null ? 0.25 : parseFloat(color.a),
+    },
+    offset: { x: parseFloat(offsetX) || 0, y: parseFloat(offsetY) || 0 },
+    radius: parseFloat(radius) || 0,
+    spread: parseFloat(spread) || 0,
+    visible: true,
+    blendMode: "NORMAL",
+    showShadowBehindNode: false,
+  };
+
+  // Preserve existing non-shadow effects (blurs), replace shadow effects
+  const existing = (node.effects || []).filter(
+    (e) => e.type !== "DROP_SHADOW" && e.type !== "INNER_SHADOW"
+  );
+  node.effects = [...existing, effect];
+
+  return { id: node.id, name: node.name, effect };
+}
+
+// ───────────────────── Layer Blur ─────────────────────
+async function setLayerBlur(params) {
+  const { nodeId, radius = 0, background = false } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+  if (!("effects" in node)) throw new Error(`Node does not support effects: ${nodeId}`);
+
+  const blurType = background ? "BACKGROUND_BLUR" : "LAYER_BLUR";
+
+  // remove existing blur of any kind, keep shadows
+  const others = (node.effects || []).filter(
+    (e) => e.type !== "LAYER_BLUR" && e.type !== "BACKGROUND_BLUR"
+  );
+
+  if (radius <= 0) {
+    node.effects = others;
+    return { id: node.id, name: node.name, removed: true };
+  }
+
+  node.effects = [
+    ...others,
+    {
+      type: blurType,
+      radius: parseFloat(radius),
+      visible: true,
+    },
+  ];
+
+  return { id: node.id, name: node.name, blurType, radius };
 }
 
 async function setStrokeColor(params) {

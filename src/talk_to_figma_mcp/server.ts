@@ -679,6 +679,160 @@ server.tool(
   }
 );
 
+// Set Gradient Fill Tool
+server.tool(
+  "set_gradient_fill",
+  "Set a gradient fill on a node in Figma. Supports linear, radial, angular, diamond gradients with 2+ color stops.",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    type: z
+      .enum(["linear", "radial", "angular", "diamond"])
+      .describe("Gradient type"),
+    stops: z
+      .array(
+        z.object({
+          position: z.number().min(0).max(1).describe("Stop position (0-1)"),
+          r: z.number().min(0).max(1),
+          g: z.number().min(0).max(1),
+          b: z.number().min(0).max(1),
+          a: z.number().min(0).max(1).optional(),
+        })
+      )
+      .min(2)
+      .describe("Color stops (at least 2)"),
+    angle: z
+      .number()
+      .optional()
+      .describe(
+        "Angle in degrees for linear gradient (0=top→bottom, 90=left→right). Default 180."
+      ),
+  },
+  async ({ nodeId, type, stops, angle }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_gradient_fill", {
+        nodeId,
+        type,
+        stops,
+        angle: angle ?? 180,
+      });
+      const typedResult = result as { name: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${type} gradient (${stops.length} stops) on node "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting gradient fill: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Drop Shadow Tool
+server.tool(
+  "set_drop_shadow",
+  "Add a drop shadow effect to a node in Figma. Replaces existing effects.",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    offsetX: z.number().describe("Shadow X offset"),
+    offsetY: z.number().describe("Shadow Y offset"),
+    radius: z.number().min(0).describe("Blur radius"),
+    spread: z.number().optional().describe("Spread (default 0)"),
+    r: z.number().min(0).max(1).describe("Shadow color R (0-1)"),
+    g: z.number().min(0).max(1).describe("Shadow color G (0-1)"),
+    b: z.number().min(0).max(1).describe("Shadow color B (0-1)"),
+    a: z.number().min(0).max(1).describe("Shadow color A / opacity (0-1)"),
+    inner: z
+      .boolean()
+      .optional()
+      .describe("True for INNER_SHADOW, false (default) for DROP_SHADOW"),
+  },
+  async ({ nodeId, offsetX, offsetY, radius, spread, r, g, b, a, inner }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_drop_shadow", {
+        nodeId,
+        offsetX,
+        offsetY,
+        radius,
+        spread: spread ?? 0,
+        color: { r, g, b, a },
+        inner: !!inner,
+      });
+      const typedResult = result as { name: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${inner ? "inner" : "drop"} shadow on node "${typedResult.name}" — offset (${offsetX}, ${offsetY}), blur ${radius}, color rgba(${r}, ${g}, ${b}, ${a})`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting drop shadow: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Layer Blur Tool
+server.tool(
+  "set_layer_blur",
+  "Apply a layer blur effect to a node in Figma. Use radius 0 to remove existing blur.",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    radius: z.number().min(0).describe("Blur radius (0 to remove)"),
+    background: z
+      .boolean()
+      .optional()
+      .describe("True for BACKGROUND_BLUR (frosted glass), false (default) for LAYER_BLUR"),
+  },
+  async ({ nodeId, radius, background }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_layer_blur", {
+        nodeId,
+        radius,
+        background: !!background,
+      });
+      const typedResult = result as { name: string };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${background ? "background" : "layer"} blur on node "${typedResult.name}" — radius ${radius}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting blur: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Move Node Tool
 server.tool(
   "move_node",
@@ -2623,6 +2777,9 @@ type FigmaCommand =
   | "create_text"
   | "set_fill_color"
   | "set_stroke_color"
+  | "set_gradient_fill"
+  | "set_drop_shadow"
+  | "set_layer_blur"
   | "move_node"
   | "resize_node"
   | "delete_node"
@@ -2702,6 +2859,26 @@ type CommandParams = {
     b: number;
     a?: number;
     weight?: number;
+  };
+  set_gradient_fill: {
+    nodeId: string;
+    type: "linear" | "radial" | "angular" | "diamond";
+    stops: Array<{ position: number; r: number; g: number; b: number; a?: number }>;
+    angle?: number;
+  };
+  set_drop_shadow: {
+    nodeId: string;
+    offsetX: number;
+    offsetY: number;
+    radius: number;
+    spread?: number;
+    color: { r: number; g: number; b: number; a: number };
+    inner?: boolean;
+  };
+  set_layer_blur: {
+    nodeId: string;
+    radius: number;
+    background?: boolean;
   };
   move_node: {
     nodeId: string;
