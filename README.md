@@ -12,25 +12,32 @@ https://github.com/user-attachments/assets/129a14d2-ed73-470f-9a4c-2240b2a4885c
 
 ## How to use
 
-1. Install Bun if you haven't already:
+1. Clone the repository and enter the project directory:
+
+```bash
+git clone https://github.com/grab/cursor-talk-to-figma-mcp.git
+cd cursor-talk-to-figma-mcp
+```
+
+2. Install Bun if you haven't already:
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-2. Run setup, this will also install MCP in your Cursor's active project
+3. Run setup, this will also install MCP in your Cursor's active project
 
 ```bash
 bun setup
 ```
 
-3. Start the Websocket server
+4. Start the Websocket server
 
 ```bash
 bun socket
 ```
 
-4. **NEW** Install Figma plugin from [Figma community page](https://www.figma.com/community/plugin/1485687494525374295/cursor-talk-to-figma-mcp-plugin) or [install locally](#figma-plugin)
+5. **NEW** Install Figma plugin from [Figma community page](https://www.figma.com/community/plugin/1485687494525374295/cursor-talk-to-figma-mcp-plugin) or [install locally](#figma-plugin)
 
 ## Quick Video Tutorial
 
