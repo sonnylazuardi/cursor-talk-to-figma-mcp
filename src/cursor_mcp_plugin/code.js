@@ -150,6 +150,8 @@ async function handleCommand(command, params) {
       return await createText(params);
     case "set_fill_color":
       return await setFillColor(params);
+    case "set_fills":
+      return await setFills(params);
     case "set_stroke_color":
       return await setStrokeColor(params);
     case "move_node":
@@ -971,6 +973,84 @@ async function setFillColor(params) {
     id: node.id,
     name: node.name,
     fills: [paintStyle],
+  };
+}
+
+// Multi-fill support — replaces the entire fills array on a node.
+// `set_fill_color` only handles a single SOLID fill; `set_fills` accepts
+// a stack of SOLID/GRADIENT_LINEAR paints with per-layer opacity, blend
+// mode, etc. Order is bottom-up: index 0 is the bottom-most layer.
+async function setFills(params) {
+  const { nodeId, fills } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!Array.isArray(fills) || fills.length === 0) {
+    throw new Error("Missing or empty fills array");
+  }
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (!("fills" in node)) {
+    throw new Error(`Node does not support fills: ${nodeId}`);
+  }
+
+  const built = fills.map((f, i) => {
+    const visible = f.visible !== false;
+    const blendMode = f.blendMode || "NORMAL";
+    if (f.type === "SOLID") {
+      if (!f.color) {
+        throw new Error(`fills[${i}]: SOLID paint requires color`);
+      }
+      const opacity =
+        f.opacity !== undefined ? f.opacity : f.color.a !== undefined ? f.color.a : 1;
+      return {
+        type: "SOLID",
+        visible,
+        blendMode,
+        color: {
+          r: parseFloat(f.color.r) || 0,
+          g: parseFloat(f.color.g) || 0,
+          b: parseFloat(f.color.b) || 0,
+        },
+        opacity: parseFloat(opacity) || 0,
+      };
+    }
+    if (f.type === "GRADIENT_LINEAR") {
+      if (!Array.isArray(f.gradientStops) || f.gradientStops.length < 2) {
+        throw new Error(
+          `fills[${i}]: GRADIENT_LINEAR requires gradientStops (at least 2)`,
+        );
+      }
+      // Default handles: vertical top→bottom (Figma convention).
+      const handles = f.gradientHandlePositions || [
+        { x: 0.5, y: 0 },
+        { x: 0.5, y: 1 },
+        { x: 0, y: 0 },
+      ];
+      return {
+        type: "GRADIENT_LINEAR",
+        visible,
+        blendMode,
+        opacity: f.opacity !== undefined ? parseFloat(f.opacity) : 1,
+        gradientStops: f.gradientStops.map((s) => ({
+          position: parseFloat(s.position) || 0,
+          color: {
+            r: parseFloat(s.color.r) || 0,
+            g: parseFloat(s.color.g) || 0,
+            b: parseFloat(s.color.b) || 0,
+            a: s.color.a !== undefined ? parseFloat(s.color.a) : 1,
+          },
+        })),
+        gradientHandlePositions: handles,
+      };
+    }
+    throw new Error(`fills[${i}]: unsupported type "${f.type}"`);
+  });
+
+  node.fills = built;
+
+  return {
+    id: node.id,
+    name: node.name,
+    fills: built,
   };
 }
 

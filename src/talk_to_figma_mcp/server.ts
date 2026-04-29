@@ -636,6 +636,98 @@ server.tool(
   }
 );
 
+// Set Fills Tool — replaces the entire fills array (multi-fill support).
+// `set_fill_color` only sets a single solid fill; this tool lets callers
+// stack multiple SOLID / GRADIENT_LINEAR fills, each with their own
+// color / opacity / blend mode. Order in the array is bottom-up: index 0
+// is the bottom-most layer, the last entry is the front-most.
+server.tool(
+  "set_fills",
+  "Set the full fills array of a node in Figma (replaces existing). Use this for multi-fill stacks (e.g. a base color + a semi-transparent overlay).",
+  {
+    nodeId: z.string().describe("The ID of the node to modify"),
+    fills: z
+      .array(
+        z.object({
+          type: z
+            .enum(["SOLID", "GRADIENT_LINEAR"])
+            .describe("Paint type. Only SOLID and GRADIENT_LINEAR are supported here."),
+          color: z
+            .object({
+              r: z.number().min(0).max(1),
+              g: z.number().min(0).max(1),
+              b: z.number().min(0).max(1),
+              a: z.number().min(0).max(1).optional(),
+            })
+            .optional()
+            .describe("Color for SOLID fills"),
+          opacity: z
+            .number()
+            .min(0)
+            .max(1)
+            .optional()
+            .describe("Layer opacity (0-1). Stacks with the color's alpha."),
+          visible: z
+            .boolean()
+            .optional()
+            .describe("Whether the fill is visible (default true)"),
+          blendMode: z
+            .string()
+            .optional()
+            .describe("Figma blend mode (e.g. NORMAL, MULTIPLY, OVERLAY). Default NORMAL."),
+          gradientStops: z
+            .array(
+              z.object({
+                position: z.number().min(0).max(1),
+                color: z.object({
+                  r: z.number().min(0).max(1),
+                  g: z.number().min(0).max(1),
+                  b: z.number().min(0).max(1),
+                  a: z.number().min(0).max(1).optional(),
+                }),
+              }),
+            )
+            .optional()
+            .describe("Gradient stops for GRADIENT_LINEAR fills"),
+          gradientHandlePositions: z
+            .array(
+              z.object({
+                x: z.number(),
+                y: z.number(),
+              }),
+            )
+            .optional()
+            .describe("Gradient handle positions for GRADIENT_LINEAR (3 points: start, end, width)"),
+        }),
+      )
+      .min(1)
+      .describe("Array of fill paints. Order is bottom-up; the last entry renders on top."),
+  },
+  async ({ nodeId, fills }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_fills", { nodeId, fills });
+      const typedResult = result as { name: string; fills?: unknown[] };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${fills.length} fill(s) on node "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting fills: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+      };
+    }
+  },
+);
+
 // Set Stroke Color Tool
 server.tool(
   "set_stroke_color",
@@ -2622,6 +2714,7 @@ type FigmaCommand =
   | "create_frame"
   | "create_text"
   | "set_fill_color"
+  | "set_fills"
   | "set_stroke_color"
   | "move_node"
   | "resize_node"
@@ -2694,6 +2787,21 @@ type CommandParams = {
     g: number;
     b: number;
     a?: number;
+  };
+  set_fills: {
+    nodeId: string;
+    fills: Array<{
+      type: "SOLID" | "GRADIENT_LINEAR";
+      color?: { r: number; g: number; b: number; a?: number };
+      opacity?: number;
+      visible?: boolean;
+      blendMode?: string;
+      gradientStops?: Array<{
+        position: number;
+        color: { r: number; g: number; b: number; a?: number };
+      }>;
+      gradientHandlePositions?: Array<{ x: number; y: number }>;
+    }>;
   };
   set_stroke_color: {
     nodeId: string;

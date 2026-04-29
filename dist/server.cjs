@@ -501,6 +501,67 @@ server.tool(
   }
 );
 server.tool(
+  "set_fills",
+  "Set the full fills array of a node in Figma (replaces existing). Use this for multi-fill stacks (e.g. a base color + a semi-transparent overlay).",
+  {
+    nodeId: import_zod.z.string().describe("The ID of the node to modify"),
+    fills: import_zod.z.array(
+      import_zod.z.object({
+        type: import_zod.z.enum(["SOLID", "GRADIENT_LINEAR"]).describe("Paint type. Only SOLID and GRADIENT_LINEAR are supported here."),
+        color: import_zod.z.object({
+          r: import_zod.z.number().min(0).max(1),
+          g: import_zod.z.number().min(0).max(1),
+          b: import_zod.z.number().min(0).max(1),
+          a: import_zod.z.number().min(0).max(1).optional()
+        }).optional().describe("Color for SOLID fills"),
+        opacity: import_zod.z.number().min(0).max(1).optional().describe("Layer opacity (0-1). Stacks with the color's alpha."),
+        visible: import_zod.z.boolean().optional().describe("Whether the fill is visible (default true)"),
+        blendMode: import_zod.z.string().optional().describe("Figma blend mode (e.g. NORMAL, MULTIPLY, OVERLAY). Default NORMAL."),
+        gradientStops: import_zod.z.array(
+          import_zod.z.object({
+            position: import_zod.z.number().min(0).max(1),
+            color: import_zod.z.object({
+              r: import_zod.z.number().min(0).max(1),
+              g: import_zod.z.number().min(0).max(1),
+              b: import_zod.z.number().min(0).max(1),
+              a: import_zod.z.number().min(0).max(1).optional()
+            })
+          })
+        ).optional().describe("Gradient stops for GRADIENT_LINEAR fills"),
+        gradientHandlePositions: import_zod.z.array(
+          import_zod.z.object({
+            x: import_zod.z.number(),
+            y: import_zod.z.number()
+          })
+        ).optional().describe("Gradient handle positions for GRADIENT_LINEAR (3 points: start, end, width)")
+      })
+    ).min(1).describe("Array of fill paints. Order is bottom-up; the last entry renders on top.")
+  },
+  async ({ nodeId, fills }) => {
+    try {
+      const result = await sendCommandToFigma("set_fills", { nodeId, fills });
+      const typedResult = result;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Set ${fills.length} fill(s) on node "${typedResult.name}"`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting fills: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+server.tool(
   "set_stroke_color",
   "Set the stroke color of a node in Figma",
   {
