@@ -28,7 +28,8 @@ var server = new McpServer({
 var args = process.argv.slice(2);
 var serverArg = args.find((arg) => arg.startsWith("--server="));
 var serverUrl = serverArg ? serverArg.split("=")[1] : "localhost";
-var WS_URL = serverUrl === "localhost" ? `ws://${serverUrl}` : `wss://${serverUrl}`;
+var insecure = args.includes("--insecure");
+var WS_URL = (serverUrl === "localhost" || insecure) ? `ws://${serverUrl}` : `wss://${serverUrl}`;
 server.tool(
   "get_document_info",
   "Get detailed information about the current Figma document",
