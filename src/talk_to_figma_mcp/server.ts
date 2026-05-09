@@ -5,6 +5,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
+import { writeFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+import { createToolProxy } from './utils/tool-proxy.js';
+import { transformFigmaNode } from './transformers/node-transformer.js';
 
 // Define TypeScript interfaces for Figma responses
 interface FigmaResponse {
@@ -79,6 +83,10 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
+// Apply tool proxy to automatically add transform parameter to read tools
+const originalTool = server.tool.bind(server);
+(server as any).tool = createToolProxy(originalTool);
+
 // Add command line argument parsing
 const args = process.argv.slice(2);
 const serverArg = args.find(arg => arg.startsWith('--server='));
@@ -108,6 +116,37 @@ server.tool(
             type: "text",
             text: `Error getting document info: ${error instanceof Error ? error.message : String(error)
               }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Current Page Tool
+server.tool(
+  "set_current_page",
+  "Switch to a different page in the Figma document. Use get_document_info to see available pages.",
+  {
+    pageId: z.string().describe("The ID of the page to switch to"),
+  },
+  async ({ pageId }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_current_page", { pageId });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error switching page: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
       };
@@ -189,7 +228,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(filterFigmaNode(result))
+            text: JSON.stringify(transformFigmaNode(result))
           }
         ]
       };
@@ -329,7 +368,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(results.map((result) => filterFigmaNode(result.info)))
+            text: JSON.stringify(results.map((result) => transformFigmaNode(result.info)))
           }
         ]
       };
@@ -854,7 +893,7 @@ server.tool(
 // Export Node as Image Tool
 server.tool(
   "export_node_as_image",
-  "Export a node as an image from Figma",
+  "Export a node as an image from Figma. Optionally save to file.",
   {
     nodeId: z.string().describe("The ID of the node to export"),
     format: z
@@ -862,8 +901,9 @@ server.tool(
       .optional()
       .describe("Export format"),
     scale: z.number().positive().optional().describe("Export scale"),
+    savePath: z.string().optional().describe("Optional file path to save the image. If provided, saves to disk and returns inline."),
   },
-  async ({ nodeId, format, scale }: any) => {
+  async ({ nodeId, format, scale, savePath }: any) => {
     try {
       const result = await sendCommandToFigma("export_node_as_image", {
         nodeId,
@@ -872,15 +912,43 @@ server.tool(
       });
       const typedResult = result as { imageData: string; mimeType: string };
 
-      return {
-        content: [
-          {
-            type: "image",
-            data: typedResult.imageData,
-            mimeType: typedResult.mimeType || "image/png",
-          },
-        ],
-      };
+      // Save to file if savePath is provided
+      let savedMessage = "";
+      if (savePath) {
+        try {
+          const buffer = Buffer.from(typedResult.imageData, "base64");
+          await mkdir(dirname(savePath), { recursive: true });
+          await writeFile(savePath, buffer);
+          savedMessage = `Image saved to: ${savePath}`;
+        } catch (saveError) {
+          savedMessage = `Failed to save: ${saveError instanceof Error ? saveError.message : String(saveError)}`;
+        }
+      }
+
+      const actualFormat = (format || "PNG").toUpperCase();
+      const content: any[] = [];
+
+      if (actualFormat === "SVG") {
+        const svgText = Buffer.from(typedResult.imageData, "base64").toString("utf-8");
+        content.push({ type: "text", text: svgText });
+      } else if (actualFormat === "PDF") {
+        content.push({ type: "text", text: savedMessage || "PDF exported. Use savePath to save to disk." });
+      } else {
+        content.push({
+          type: "image",
+          data: typedResult.imageData,
+          mimeType: typedResult.mimeType || "image/png",
+        });
+      }
+
+      if (savedMessage && actualFormat !== "PDF") {
+        content.push({
+          type: "text",
+          text: savedMessage,
+        });
+      }
+
+      return { content };
     } catch (error) {
       return {
         content: [
@@ -969,7 +1037,7 @@ server.tool(
   {},
   async () => {
     try {
-      const result = await sendCommandToFigma("get_local_components");
+      const result = await sendCommandToFigma("get_local_components", {}, 120000);
       return {
         content: [
           {
@@ -2614,6 +2682,7 @@ This detailed process ensures you correctly interpret the reaction data, prepare
 // Define command types and parameters
 type FigmaCommand =
   | "get_document_info"
+  | "set_current_page"
   | "get_selection"
   | "get_node_info"
   | "get_nodes_info"
@@ -2656,6 +2725,7 @@ type FigmaCommand =
 
 type CommandParams = {
   get_document_info: Record<string, never>;
+  set_current_page: { pageId: string };
   get_selection: Record<string, never>;
   get_node_info: { nodeId: string };
   get_nodes_info: { nodeIds: string[] };
@@ -2901,6 +2971,18 @@ function connectToFigma(port: number = 3055) {
         return;
       }
 
+      // Handle channels_list response
+      if (json.type === 'channels_list') {
+        const requestId = json.id;
+        if (requestId && pendingRequests.has(requestId)) {
+          const request = pendingRequests.get(requestId)!;
+          clearTimeout(request.timeout);
+          request.resolve(json.channels);
+          pendingRequests.delete(requestId);
+        }
+        return;
+      }
+
       // Handle regular responses
       const myResponse = json.message;
       logger.debug(`Received message: ${JSON.stringify(myResponse)}`);
@@ -2969,6 +3051,43 @@ async function joinChannel(channelName: string): Promise<void> {
     logger.error(`Failed to join channel: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
+}
+
+// Function to list available channels
+interface ChannelInfo {
+  name: string;
+  clientCount: number;
+}
+
+async function listChannels(): Promise<ChannelInfo[]> {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    throw new Error("Not connected to Figma socket server");
+  }
+
+  return new Promise((resolve, reject) => {
+    const id = uuidv4();
+    const request = {
+      type: "list_channels",
+      id
+    };
+
+    const timeout = setTimeout(() => {
+      if (pendingRequests.has(id)) {
+        pendingRequests.delete(id);
+        reject(new Error("Request to list channels timed out"));
+      }
+    }, 10000);
+
+    pendingRequests.set(id, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
+      timeout,
+      lastActivity: Date.now()
+    });
+
+    logger.info("Requesting channels list");
+    ws!.send(JSON.stringify(request));
+  });
 }
 
 // Function to send commands to Figma
@@ -3074,6 +3193,47 @@ server.tool(
             type: "text",
             text: `Error joining channel: ${error instanceof Error ? error.message : String(error)
               }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// List channels tool
+server.tool(
+  "list_channels",
+  "Get list of active channels with connected clients count",
+  {},
+  async () => {
+    try {
+      const channels = await listChannels();
+
+      if (channels.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "No active channels found. Channels are created when Figma plugin connects.",
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(channels, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing channels: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
       };

@@ -38,10 +38,15 @@ function handleConnection(ws: ServerWebSocket<any>) {
   };
 }
 
+const tlsConfig = process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH
+  ? { key: Bun.file(process.env.SSL_KEY_PATH), cert: Bun.file(process.env.SSL_CERT_PATH) }
+  : undefined;
+
 const server = Bun.serve({
-  port: 3055,
   // uncomment this to allow connections in windows wsl
   // hostname: "0.0.0.0",
+  port: process.env.PORT ? parseInt(process.env.PORT) : 3055,
+  tls: tlsConfig,
   fetch(req: Request, server: Server) {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -133,6 +138,23 @@ const server = Bun.serve({
               }));
             }
           });
+          return;
+        }
+
+        // Handle list_channels request
+        if (data.type === "list_channels") {
+          const channelList = Array.from(channels.keys()).map(name => ({
+            name,
+            clientCount: channels.get(name)?.size || 0
+          }));
+
+          console.log(`\n✓ Sending channels list (${channelList.length} channels)`);
+
+          ws.send(JSON.stringify({
+            type: "channels_list",
+            id: data.id,
+            channels: channelList
+          }));
           return;
         }
 

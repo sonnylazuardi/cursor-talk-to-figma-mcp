@@ -1,70 +1,78 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Repository
 
-## Project Overview
+This is a personal fork of [`sonnylazuardi/cursor-talk-to-figma-mcp`](https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp), hosted at [`ivan01march/talk-to-figma-dev`](https://github.com/ivan01march/talk-to-figma-dev). Local customizations live as regular commits on this fork.
 
-MCP (Model Context Protocol) server that bridges Cursor AI IDE with Figma. Three components communicate in a pipeline:
+## Workflow for Upstream Updates
 
-```
-Cursor AI ←(stdio)→ MCP Server ←(WebSocket)→ WebSocket Relay ←(WebSocket)→ Figma Plugin
-```
-
-## Build & Development Commands
+To pull updates from the original repository, add it as an `upstream` remote (one-time):
 
 ```bash
-bun install              # Install dependencies
-bun run build            # Build MCP server (tsup → dist/)
-bun run dev              # Build in watch mode
-bun socket               # Start WebSocket relay server (port 3055)
-bun run start            # Run built MCP server
-bun setup                # Full setup (install + write .cursor/mcp.json + .mcp.json)
+git remote add upstream https://github.com/sonnylazuardi/cursor-talk-to-figma-mcp.git
 ```
 
-There is no test suite or linter configured.
+Then sync:
 
-## Architecture
+```bash
+git fetch upstream
+git merge upstream/main   # or: git rebase upstream/main
+```
+
+Resolve any merge conflicts manually.
+
+## Local Customizations
+
+### WebSocket Server (`src/socket.ts`)
+- Optional TLS — works without SSL certificates (set `SSL_KEY_PATH` and `SSL_CERT_PATH` to enable)
+- Structured logging with type, channel, command info
+- `list_channels` command — returns active channels with client counts
+- Broadcast fix — sends to other clients only (prevents echo)
 
 ### MCP Server (`src/talk_to_figma_mcp/server.ts`)
-The main server implementing the MCP protocol via `@modelcontextprotocol/sdk`. Exposes 50+ tools (create shapes, modify text, manage layouts, export images, etc.) and several AI prompts (design strategies). Communicates with Cursor over stdio and with the WebSocket relay via `ws`. Each request gets a UUID, is tracked in a `pendingRequests` Map with timeout/promise callbacks, and resolves when the plugin responds.
+- `list_channels` tool — get active channels list
+- `export_node_as_image` — added `savePath` param to save to disk
+- Tool proxy — auto-adds `transform` param to read tools
+- `get_node_info` / `get_nodes_info` — use `transformFigmaNode` instead of local `filterFigmaNode` (1 import + 2 call sites changed; `filterFigmaNode` itself untouched)
 
-### WebSocket Relay (`src/socket.ts`)
-Lightweight Bun WebSocket server on port 3055 (configurable via `PORT` env). Routes messages between MCP server and Figma plugin using channel-based isolation. Clients call `join` to enter a channel; messages broadcast only within the same channel.
+### Figma Plugin (`src/cursor_mcp_plugin/code.js`)
+- `filterFigmaNode` — **not modified** (original preserved)
+- New functions under `// === LOCAL CUSTOMIZATIONS ===` marker:
+  - `serializeEffect` — serializes a single Figma effect with color conversion
+  - `supplementNodeProperties` — reads directly from Plugin API and adds to filtered result: `effects`, `opacity`, `blendMode`, `strokeWeight`, `strokeAlign`, `styles` (styleId mapping), `effectStyleId`
+  - `getNodeInfoRaw` — returns the unfiltered `JSON_REST_V1` `response.document` from Plugin API. Includes fields the standard pipeline strips: `layoutMode`, padding\*, `itemSpacing`, `primaryAxisAlignItems`/`counterAxisAlignItems`, sizing modes, `visible`, `componentId` (on INSTANCE), `imageRef` in fills, VECTOR nodes
+- `getNodeInfo`, `getNodesInfo`, `readMyDesign` — each calls `supplementNodeProperties(result, node)` after `filterFigmaNode`
+- New `case "get_node_info_raw"` added to the `handleCommand` switch (4 added lines, no original cases modified)
+- **Requires Figma Desktop** to pick up local changes (published plugin ignores local files)
 
-### Figma Plugin (`src/cursor_mcp_plugin/`)
-Runs inside Figma. `code.js` is the plugin main thread handling 30+ commands via a dispatcher. `ui.html` is the plugin UI for WebSocket connection management. `manifest.json` declares permissions (dynamic-page access, localhost network). The plugin is **not built/bundled** — `code.js` is written directly as the runtime artifact.
+### Transform System (new files)
+- `transformers/node-transformer.ts` — filters/limits Figma responses, includes effects support
+- `types/transform-options.ts` — TypeScript interfaces
+- `utils/tool-proxy.ts` — proxy for auto-adding transform + caching
+- `utils/figma-helpers.ts` — utilities (rgbaToHex)
 
-## Key Patterns
+### Caching
+- Preloads `get_document_info` after `join_channel` for faster subsequent reads
+- Use `noCache: true` to force fresh data
 
-- **Colors**: Figma uses RGBA 0-1 range. The MCP tools accept 0-1 floats and the filter converts to hex for display.
-- **Logging**: All logs go to stderr. Stdout is reserved for MCP protocol messages.
-- **Timeouts**: 30s default per command. Progress updates from the plugin reset the inactivity timer.
-- **Chunking**: Large operations (scanning 100+ nodes) are chunked with progress updates to prevent Figma UI freezing.
-- **Reconnection**: WebSocket auto-reconnects after 2 seconds on disconnect.
-- **Zod validation**: All tool parameters are validated with Zod schemas.
+**Transform options for read tools:**
+- `maxDepth`, `maxChildren` — limit tree traversal
+- `typeFilter`, `propertyFilter` — filter nodes/properties
+- `simplifyStyles` — simplify fills/strokes/effects
+- `pagination` — paginate children
+- `savePath` — save response to JSON
+- `noCache` — skip cache
 
-## Setup
+## Known Limitations
 
-1. Run `bun setup` — installs dependencies and writes MCP config for both Cursor (`.cursor/mcp.json`) and Claude Code (`.mcp.json`)
-2. `bun socket` in one terminal (WebSocket relay)
-3. In Figma: Plugins → Development → Link existing plugin → select `src/cursor_mcp_plugin/manifest.json`
-4. Run plugin in Figma, join a channel, then use tools from Cursor or Claude Code
+### Figma Desktop sleeps when backgrounded
+When Figma Desktop is not the foreground window, the OS throttles the plugin sandbox. Async MCP sequences — notably `set_current_page(pageId)` followed by `get_node_info(nodeId)` on the just-switched page — fail or stall with generic errors until the user brings Figma into focus. **Not a bug in this repo.** No code change (retry, delay, cache invalidation) fixes it, because the sandbox itself stops executing. If a user reports flaky cross-page behavior, first ask whether Figma was in the foreground during the run.
 
-The MCP config written by `bun setup` uses the published package:
+## Code Quality Checks
 
-```json
-{
-  "mcpServers": {
-    "TalkToFigma": {
-      "command": "bunx",
-      "args": ["cursor-talk-to-figma-mcp@latest"]
-    }
-  }
-}
-```
-
-You can also add it manually for Claude Code via the CLI:
+After modifying files, run:
 
 ```bash
-claude mcp add TalkToFigma -- bunx cursor-talk-to-figma-mcp@latest
+npx tsc --noEmit                        # Type checking (root)
+cd src/talk_to_figma_mcp && npx tsc --noEmit  # Type checking (MCP server)
 ```

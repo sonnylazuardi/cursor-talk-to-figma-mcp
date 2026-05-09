@@ -3,9 +3,612 @@
 // src/talk_to_figma_mcp/server.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+import { z as z3 } from "zod";
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
+import { writeFile as writeFile2, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+
+// src/talk_to_figma_mcp/utils/tool-proxy.ts
+import { z as z2 } from "zod";
+import * as fs from "fs/promises";
+
+// src/talk_to_figma_mcp/types/transform-options.ts
+var BASE_PROPERTIES = [
+  "id",
+  "name",
+  "type",
+  "children"
+];
+
+// src/talk_to_figma_mcp/utils/figma-helpers.ts
+function rgbaToHex(color) {
+  if (typeof color === "string" && color.startsWith("#")) {
+    return color;
+  }
+  if (!color || typeof color !== "object") {
+    return "#000000";
+  }
+  const r = Math.round((color.r ?? 0) * 255);
+  const g = Math.round((color.g ?? 0) * 255);
+  const b = Math.round((color.b ?? 0) * 255);
+  const a = Math.round((color.a ?? 1) * 255);
+  const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+  return a === 255 ? hex : `${hex}${a.toString(16).padStart(2, "0")}`;
+}
+
+// src/talk_to_figma_mcp/transformers/node-transformer.ts
+function transformFigmaNode(data, options) {
+  if (!options || Object.keys(options).length === 0) {
+    return filterFigmaNodeOriginal(data);
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => {
+      if (item && typeof item === "object" && "document" in item) {
+        return {
+          ...item,
+          document: transformSingleNode(item.document, options)
+        };
+      }
+      return transformSingleNode(item, options);
+    });
+  }
+  return transformSingleNode(data, options);
+}
+function transformSingleNode(node, options) {
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+  const context = {
+    options,
+    currentDepth: 0,
+    path: []
+  };
+  return transformNodeRecursive(node, context);
+}
+function transformNodeRecursive(node, context) {
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+  const { options, currentDepth, path } = context;
+  const nodeName = node.name || node.id || "unknown";
+  const currentPath = [...path, nodeName];
+  if (shouldExcludeByType(node, options.typeFilter)) {
+    if (options.typeFilter?.excludeMode === "stub") {
+      return createNodeStub(node, currentPath, options.includeMetadata);
+    }
+    return null;
+  }
+  if (options.maxDepth !== void 0 && currentDepth >= options.maxDepth) {
+    return createTruncatedNode(node, currentPath, options.includeMetadata);
+  }
+  const filtered = buildFilteredNode(node, options);
+  if (options.includeMetadata) {
+    filtered._path = currentPath.join(" / ");
+  }
+  if (node.children && Array.isArray(node.children)) {
+    const childContext = {
+      ...context,
+      currentDepth: currentDepth + 1,
+      path: currentPath
+    };
+    const processedChildren = processChildren(node.children, childContext, filtered);
+    if (processedChildren.length > 0) {
+      filtered.children = processedChildren;
+    }
+  }
+  return filtered;
+}
+function shouldExcludeByType(node, typeFilter) {
+  if (!typeFilter || !node.type) {
+    return false;
+  }
+  if (typeFilter.include && typeFilter.include.length > 0) {
+    return !typeFilter.include.includes(node.type);
+  }
+  if (typeFilter.exclude && typeFilter.exclude.length > 0) {
+    return typeFilter.exclude.includes(node.type);
+  }
+  return false;
+}
+function createNodeStub(node, path, includeMetadata) {
+  const stub = {
+    id: node.id,
+    name: node.name,
+    type: node.type,
+    _excluded: true
+  };
+  if (includeMetadata) {
+    stub._path = path.join(" / ");
+  }
+  return stub;
+}
+function createTruncatedNode(node, path, includeMetadata) {
+  const truncated = {
+    id: node.id,
+    name: node.name,
+    type: node.type,
+    _truncated: true
+  };
+  if (node.children && Array.isArray(node.children)) {
+    truncated._childrenCount = node.children.length;
+  }
+  if (includeMetadata) {
+    truncated._path = path.join(" / ");
+  }
+  return truncated;
+}
+function buildFilteredNode(node, options) {
+  const filtered = {
+    id: node.id,
+    name: node.name,
+    type: node.type
+  };
+  const propFilter = options.propertyFilter;
+  const shouldIncludeProp = (prop) => {
+    if (BASE_PROPERTIES.includes(prop)) return true;
+    if (propFilter?.include && propFilter.include.length > 0) {
+      return propFilter.include.includes(prop);
+    }
+    if (propFilter?.exclude && propFilter.exclude.length > 0) {
+      return !propFilter.exclude.includes(prop);
+    }
+    return true;
+  };
+  if (node.fills?.length > 0 && shouldIncludeProp("fills")) {
+    filtered.fills = options.simplifyStyles ? simplifyFills(node.fills, options.simplifyStyles) : processFills(node.fills);
+  }
+  if (node.strokes?.length > 0 && shouldIncludeProp("strokes")) {
+    filtered.strokes = options.simplifyStyles ? simplifyStrokes(node.strokes) : processStrokes(node.strokes);
+  }
+  if (node.effects?.length > 0 && shouldIncludeProp("effects")) {
+    filtered.effects = options.simplifyStyles ? simplifyEffects(node.effects) : processEffects(node.effects);
+  }
+  const propsToCheck = [
+    "cornerRadius",
+    "absoluteBoundingBox",
+    "characters",
+    "style",
+    "layoutMode",
+    "layoutWrap",
+    "itemSpacing",
+    "counterAxisSpacing",
+    "paddingTop",
+    "paddingRight",
+    "paddingBottom",
+    "paddingLeft",
+    "primaryAxisAlignItems",
+    "counterAxisAlignItems",
+    "layoutSizingHorizontal",
+    "layoutSizingVertical",
+    "visible",
+    "locked",
+    "opacity",
+    "blendMode",
+    "constraints",
+    "rotation",
+    "x",
+    "y",
+    "width",
+    "height"
+  ];
+  for (const prop of propsToCheck) {
+    if (node[prop] !== void 0 && shouldIncludeProp(prop)) {
+      if (prop === "style") {
+        filtered.style = extractTextStyle(node.style);
+      } else {
+        filtered[prop] = node[prop];
+      }
+    }
+  }
+  return filtered;
+}
+function processChildren(children, context, parentNode) {
+  const { options } = context;
+  let result = children;
+  const totalChildren = children.length;
+  if (options.pagination) {
+    const { page, pageSize } = options.pagination;
+    const start = page * pageSize;
+    const end = start + pageSize;
+    result = result.slice(start, end);
+    if (options.includeMetadata) {
+      parentNode._pagination = {
+        page,
+        pageSize,
+        totalChildren,
+        totalPages: Math.ceil(totalChildren / pageSize)
+      };
+    }
+  }
+  if (options.maxChildren !== void 0 && result.length > options.maxChildren) {
+    const truncatedCount = result.length - options.maxChildren;
+    result = result.slice(0, options.maxChildren);
+    if (options.includeMetadata) {
+      parentNode._childrenTruncated = truncatedCount;
+    }
+  }
+  return result.map((child) => transformNodeRecursive(child, context)).filter((child) => child !== null);
+}
+function simplifyFills(fills, styleOptions) {
+  const gradientMode = typeof styleOptions === "object" ? styleOptions.gradients || "remove_stops" : "remove_stops";
+  return fills.map((fill) => {
+    if (fill.type === "SOLID") {
+      return {
+        type: fill.type,
+        color: fill.color ? rgbaToHex(fill.color) : void 0,
+        opacity: fill.opacity,
+        visible: fill.visible
+      };
+    }
+    if (fill.type?.includes("GRADIENT")) {
+      if (gradientMode === "remove") {
+        return null;
+      }
+      const simplified = {
+        type: fill.type,
+        visible: fill.visible
+      };
+      if (gradientMode === "keep" && fill.gradientStops) {
+        simplified.gradientStops = fill.gradientStops.map((stop) => ({
+          position: stop.position,
+          color: stop.color ? rgbaToHex(stop.color) : void 0
+        }));
+      }
+      return simplified;
+    }
+    return {
+      type: fill.type,
+      visible: fill.visible
+    };
+  }).filter(Boolean);
+}
+function simplifyStrokes(strokes) {
+  return strokes.map((stroke) => ({
+    type: stroke.type,
+    color: stroke.color ? rgbaToHex(stroke.color) : void 0,
+    opacity: stroke.opacity,
+    visible: stroke.visible
+  }));
+}
+function processFills(fills) {
+  return fills.map((fill) => {
+    const processedFill = { ...fill };
+    delete processedFill.boundVariables;
+    delete processedFill.imageRef;
+    if (processedFill.gradientStops) {
+      processedFill.gradientStops = processedFill.gradientStops.map((stop) => {
+        const processedStop = { ...stop };
+        if (processedStop.color) {
+          processedStop.color = rgbaToHex(processedStop.color);
+        }
+        delete processedStop.boundVariables;
+        return processedStop;
+      });
+    }
+    if (processedFill.color) {
+      processedFill.color = rgbaToHex(processedFill.color);
+    }
+    return processedFill;
+  });
+}
+function processStrokes(strokes) {
+  return strokes.map((stroke) => {
+    const processedStroke = { ...stroke };
+    delete processedStroke.boundVariables;
+    if (processedStroke.color) {
+      processedStroke.color = rgbaToHex(processedStroke.color);
+    }
+    return processedStroke;
+  });
+}
+function processEffects(effects) {
+  return effects.map((effect) => {
+    const processed = { ...effect };
+    delete processed.boundVariables;
+    if (processed.color) {
+      processed.color = rgbaToHex(processed.color);
+    }
+    return processed;
+  });
+}
+function simplifyEffects(effects) {
+  return effects.map((effect) => {
+    const simplified = {
+      type: effect.type,
+      visible: effect.visible,
+      radius: effect.radius
+    };
+    if (effect.color) {
+      simplified.color = rgbaToHex(effect.color);
+    }
+    if (effect.offset) {
+      simplified.offset = effect.offset;
+    }
+    if (effect.spread !== void 0) {
+      simplified.spread = effect.spread;
+    }
+    if (effect.blendMode) {
+      simplified.blendMode = effect.blendMode;
+    }
+    return simplified;
+  });
+}
+function extractTextStyle(style) {
+  if (!style) return void 0;
+  return {
+    fontFamily: style.fontFamily,
+    fontStyle: style.fontStyle,
+    fontWeight: style.fontWeight,
+    fontSize: style.fontSize,
+    textAlignHorizontal: style.textAlignHorizontal,
+    letterSpacing: style.letterSpacing,
+    lineHeightPx: style.lineHeightPx
+  };
+}
+function filterFigmaNodeOriginal(node) {
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+  if (Array.isArray(node)) {
+    return node.map((item) => filterFigmaNodeOriginal(item));
+  }
+  if ("document" in node) {
+    return {
+      ...node,
+      document: filterFigmaNodeOriginal(node.document)
+    };
+  }
+  if (node.type === "VECTOR") {
+    return null;
+  }
+  const filtered = {
+    id: node.id,
+    name: node.name,
+    type: node.type
+  };
+  if (node.fills?.length > 0) {
+    filtered.fills = processFills(node.fills);
+  }
+  if (node.strokes?.length > 0) {
+    filtered.strokes = processStrokes(node.strokes);
+  }
+  if (node.cornerRadius !== void 0) {
+    filtered.cornerRadius = node.cornerRadius;
+  }
+  if (node.absoluteBoundingBox) {
+    filtered.absoluteBoundingBox = node.absoluteBoundingBox;
+  }
+  if (node.characters) {
+    filtered.characters = node.characters;
+  }
+  if (node.style) {
+    filtered.style = extractTextStyle(node.style);
+  }
+  if (node.effects?.length > 0) {
+    filtered.effects = processEffects(node.effects);
+  }
+  if (node.children) {
+    filtered.children = node.children.map((child) => filterFigmaNodeOriginal(child)).filter((child) => child !== null);
+  }
+  return filtered;
+}
+
+// src/talk_to_figma_mcp/utils/schema-coercion.ts
+import { z } from "zod";
+var parseArrayString = (val) => {
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : val;
+    } catch {
+      return val;
+    }
+  }
+  return val;
+};
+var parseNumberString = (val) => {
+  if (typeof val === "string" && val.trim() !== "") {
+    const parsed = Number(val);
+    return Number.isNaN(parsed) ? val : parsed;
+  }
+  return val;
+};
+function preserveDescription(original, wrapped) {
+  const description = original?._def?.description;
+  if (description && !wrapped?._def?.description) {
+    return wrapped.describe(description);
+  }
+  return wrapped;
+}
+function coerceField(field) {
+  if (!field || typeof field !== "object" || !field._def) {
+    return field;
+  }
+  const typeName = field._def.typeName;
+  if (typeName === "ZodOptional") {
+    const inner = field._def.innerType;
+    const coercedInner = coerceField(inner);
+    if (coercedInner === inner) return field;
+    return preserveDescription(field, coercedInner.optional());
+  }
+  if (typeName === "ZodNullable") {
+    const inner = field._def.innerType;
+    const coercedInner = coerceField(inner);
+    if (coercedInner === inner) return field;
+    return preserveDescription(field, coercedInner.nullable());
+  }
+  if (typeName === "ZodDefault") {
+    const inner = field._def.innerType;
+    const coercedInner = coerceField(inner);
+    if (coercedInner === inner) return field;
+    const defaultGetter = field._def.defaultValue;
+    const defaultVal = typeof defaultGetter === "function" ? defaultGetter() : defaultGetter;
+    return preserveDescription(field, coercedInner.default(defaultVal));
+  }
+  if (typeName === "ZodArray") {
+    return preserveDescription(field, z.preprocess(parseArrayString, field));
+  }
+  if (typeName === "ZodNumber") {
+    return preserveDescription(field, z.preprocess(parseNumberString, field));
+  }
+  return field;
+}
+function coerceSchemaFields(schema) {
+  const result = {};
+  for (const [key, value] of Object.entries(schema)) {
+    result[key] = coerceField(value);
+  }
+  return result;
+}
+
+// src/talk_to_figma_mcp/utils/tool-proxy.ts
+var READ_TOOLS = [
+  "get_document_info",
+  "get_selection",
+  "read_my_design",
+  "get_node_info",
+  "get_nodes_info",
+  "get_styles",
+  "get_local_components",
+  "scan_text_nodes",
+  "scan_nodes_by_types",
+  "get_annotations",
+  "get_instance_overrides",
+  "get_reactions"
+];
+var pageCache = {
+  documentInfo: null,
+  timestamp: 0,
+  channel: null
+};
+var isPreloading = false;
+var getDocumentInfoHandler = null;
+var transformSchema = z2.object({
+  maxDepth: z2.number().min(0).optional().describe("Maximum depth to traverse the node tree"),
+  maxChildren: z2.number().min(1).optional().describe("Maximum number of children per node"),
+  typeFilter: z2.object({
+    include: z2.array(z2.string()).optional().describe("Only include these node types (whitelist)"),
+    exclude: z2.array(z2.string()).optional().describe("Exclude these node types (blacklist)"),
+    excludeMode: z2.enum(["remove", "stub"]).optional().describe("How to handle excluded nodes: remove or keep as stub")
+  }).optional().describe("Filter nodes by type"),
+  propertyFilter: z2.object({
+    include: z2.array(z2.string()).optional().describe("Only include these properties"),
+    exclude: z2.array(z2.string()).optional().describe("Exclude these properties")
+  }).optional().describe("Filter node properties"),
+  simplifyStyles: z2.boolean().optional().describe("Simplify fills/strokes to minimal format"),
+  includeMetadata: z2.boolean().optional().describe("Add metadata: _path, _truncated, _childrenCount"),
+  pagination: z2.object({
+    page: z2.number().min(0).describe("Page number (0-based)"),
+    pageSize: z2.number().min(1).max(100).describe("Number of children per page")
+  }).optional().describe("Paginate children array")
+}).optional().describe("Options for filtering and transforming the response");
+function createToolProxy(originalTool2) {
+  return function proxyTool(name, description, rawSchema, handler) {
+    const schema = coerceSchemaFields(rawSchema);
+    if (name === "get_document_info") {
+      getDocumentInfoHandler = handler;
+    }
+    if (READ_TOOLS.includes(name)) {
+      const extendedSchema = {
+        ...schema,
+        transform: transformSchema,
+        savePath: z2.string().optional().describe("Path to save response as JSON file"),
+        noCache: z2.boolean().optional().describe("Skip cache and fetch fresh data")
+      };
+      const extendedDescription = `${description}. Supports optional 'transform' parameter for filtering/limiting the response.`;
+      const wrappedHandler = async (params) => {
+        const { transform, savePath, noCache, ...originalParams } = params || {};
+        if (name === "get_document_info" && !noCache && !isPreloading && pageCache.documentInfo) {
+          const cachedResult = {
+            content: [{
+              type: "text",
+              text: JSON.stringify(pageCache.documentInfo)
+            }]
+          };
+          let finalCachedResult = cachedResult;
+          if (transform) {
+            try {
+              const transformed = transformFigmaNode(pageCache.documentInfo, transform);
+              finalCachedResult = {
+                content: [{
+                  type: "text",
+                  text: JSON.stringify(transformed)
+                }]
+              };
+            } catch {
+            }
+          }
+          if (savePath && finalCachedResult?.content?.[0]?.text) {
+            try {
+              await fs.writeFile(savePath, finalCachedResult.content[0].text, "utf-8");
+            } catch {
+            }
+          }
+          return finalCachedResult;
+        }
+        if (noCache && name === "get_document_info") {
+          pageCache.documentInfo = null;
+        }
+        const result = await handler(Object.keys(originalParams).length > 0 ? originalParams : void 0);
+        if (name === "get_document_info" && result?.content?.[0]?.text) {
+          try {
+            pageCache.documentInfo = JSON.parse(result.content[0].text);
+            pageCache.timestamp = Date.now();
+          } catch {
+          }
+        }
+        let finalResult = result;
+        if (transform && result?.content?.[0]?.text) {
+          try {
+            const data = JSON.parse(result.content[0].text);
+            const transformed = transformFigmaNode(data, transform);
+            finalResult = {
+              ...result,
+              content: [{
+                type: "text",
+                text: JSON.stringify(transformed)
+              }]
+            };
+          } catch {
+          }
+        }
+        if (savePath && finalResult?.content?.[0]?.text) {
+          try {
+            await fs.writeFile(savePath, finalResult.content[0].text, "utf-8");
+          } catch {
+          }
+        }
+        return finalResult;
+      };
+      return originalTool2(name, extendedDescription, extendedSchema, wrappedHandler);
+    }
+    if (name === "join_channel") {
+      const wrappedJoinHandler = async (params) => {
+        const result = await handler(params);
+        if (result?.content?.[0]?.text?.includes("Successfully joined") && getDocumentInfoHandler) {
+          isPreloading = true;
+          try {
+            pageCache.channel = params.channel;
+            const docResult = await getDocumentInfoHandler({});
+            if (docResult?.content?.[0]?.text) {
+              pageCache.documentInfo = JSON.parse(docResult.content[0].text);
+              pageCache.timestamp = Date.now();
+            }
+          } catch {
+          } finally {
+            isPreloading = false;
+          }
+        }
+        return result;
+      };
+      return originalTool2(name, description, schema, wrappedJoinHandler);
+    }
+    return originalTool2(name, description, schema, handler);
+  };
+}
+
+// src/talk_to_figma_mcp/server.ts
 var logger = {
   info: (message) => process.stderr.write(`[INFO] ${message}
 `),
@@ -25,6 +628,8 @@ var server = new McpServer({
   name: "TalkToFigmaMCP",
   version: "1.0.0"
 });
+var originalTool = server.tool.bind(server);
+server.tool = createToolProxy(originalTool);
 var args = process.argv.slice(2);
 var serverArg = args.find((arg) => arg.startsWith("--server="));
 var serverUrl = serverArg ? serverArg.split("=")[1] : "localhost";
@@ -50,6 +655,35 @@ server.tool(
           {
             type: "text",
             text: `Error getting document info: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+server.tool(
+  "set_current_page",
+  "Switch to a different page in the Figma document. Use get_document_info to see available pages.",
+  {
+    pageId: z3.string().describe("The ID of the page to switch to")
+  },
+  async ({ pageId }) => {
+    try {
+      const result = await sendCommandToFigma("set_current_page", { pageId });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error switching page: ${error instanceof Error ? error.message : String(error)}`
           }
         ]
       };
@@ -114,7 +748,7 @@ server.tool(
   "get_node_info",
   "Get detailed information about a specific node in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to get information about")
+    nodeId: z3.string().describe("The ID of the node to get information about")
   },
   async ({ nodeId }) => {
     try {
@@ -123,7 +757,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(filterFigmaNode(result))
+            text: JSON.stringify(transformFigmaNode(result))
           }
         ]
       };
@@ -139,86 +773,11 @@ server.tool(
     }
   }
 );
-function rgbaToHex(color) {
-  if (color.startsWith("#")) {
-    return color;
-  }
-  const r = Math.round(color.r * 255);
-  const g = Math.round(color.g * 255);
-  const b = Math.round(color.b * 255);
-  const a = Math.round(color.a * 255);
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a === 255 ? "" : a.toString(16).padStart(2, "0")}`;
-}
-function filterFigmaNode(node) {
-  if (node.type === "VECTOR") {
-    return null;
-  }
-  const filtered = {
-    id: node.id,
-    name: node.name,
-    type: node.type
-  };
-  if (node.fills && node.fills.length > 0) {
-    filtered.fills = node.fills.map((fill) => {
-      const processedFill = { ...fill };
-      delete processedFill.boundVariables;
-      delete processedFill.imageRef;
-      if (processedFill.gradientStops) {
-        processedFill.gradientStops = processedFill.gradientStops.map((stop) => {
-          const processedStop = { ...stop };
-          if (processedStop.color) {
-            processedStop.color = rgbaToHex(processedStop.color);
-          }
-          delete processedStop.boundVariables;
-          return processedStop;
-        });
-      }
-      if (processedFill.color) {
-        processedFill.color = rgbaToHex(processedFill.color);
-      }
-      return processedFill;
-    });
-  }
-  if (node.strokes && node.strokes.length > 0) {
-    filtered.strokes = node.strokes.map((stroke) => {
-      const processedStroke = { ...stroke };
-      delete processedStroke.boundVariables;
-      if (processedStroke.color) {
-        processedStroke.color = rgbaToHex(processedStroke.color);
-      }
-      return processedStroke;
-    });
-  }
-  if (node.cornerRadius !== void 0) {
-    filtered.cornerRadius = node.cornerRadius;
-  }
-  if (node.absoluteBoundingBox) {
-    filtered.absoluteBoundingBox = node.absoluteBoundingBox;
-  }
-  if (node.characters) {
-    filtered.characters = node.characters;
-  }
-  if (node.style) {
-    filtered.style = {
-      fontFamily: node.style.fontFamily,
-      fontStyle: node.style.fontStyle,
-      fontWeight: node.style.fontWeight,
-      fontSize: node.style.fontSize,
-      textAlignHorizontal: node.style.textAlignHorizontal,
-      letterSpacing: node.style.letterSpacing,
-      lineHeightPx: node.style.lineHeightPx
-    };
-  }
-  if (node.children) {
-    filtered.children = node.children.map((child) => filterFigmaNode(child)).filter((child) => child !== null);
-  }
-  return filtered;
-}
 server.tool(
   "get_nodes_info",
   "Get detailed information about multiple nodes in Figma",
   {
-    nodeIds: z.array(z.string()).describe("Array of node IDs to get information about")
+    nodeIds: z3.array(z3.string()).describe("Array of node IDs to get information about")
   },
   async ({ nodeIds }) => {
     try {
@@ -232,7 +791,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: JSON.stringify(results.map((result) => filterFigmaNode(result.info)))
+            text: JSON.stringify(results.map((result) => transformFigmaNode(result.info)))
           }
         ]
       };
@@ -252,12 +811,12 @@ server.tool(
   "create_rectangle",
   "Create a new rectangle in Figma",
   {
-    x: z.number().describe("X position"),
-    y: z.number().describe("Y position"),
-    width: z.number().describe("Width of the rectangle"),
-    height: z.number().describe("Height of the rectangle"),
-    name: z.string().optional().describe("Optional name for the rectangle"),
-    parentId: z.string().optional().describe("Optional parent node ID to append the rectangle to")
+    x: z3.number().describe("X position"),
+    y: z3.number().describe("Y position"),
+    width: z3.number().describe("Width of the rectangle"),
+    height: z3.number().describe("Height of the rectangle"),
+    name: z3.string().optional().describe("Optional name for the rectangle"),
+    parentId: z3.string().optional().describe("Optional parent node ID to append the rectangle to")
   },
   async ({ x, y, width, height, name, parentId }) => {
     try {
@@ -293,36 +852,36 @@ server.tool(
   "create_frame",
   "Create a new frame in Figma",
   {
-    x: z.number().describe("X position"),
-    y: z.number().describe("Y position"),
-    width: z.number().describe("Width of the frame"),
-    height: z.number().describe("Height of the frame"),
-    name: z.string().optional().describe("Optional name for the frame"),
-    parentId: z.string().optional().describe("Optional parent node ID to append the frame to"),
-    fillColor: z.object({
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    x: z3.number().describe("X position"),
+    y: z3.number().describe("Y position"),
+    width: z3.number().describe("Width of the frame"),
+    height: z3.number().describe("Height of the frame"),
+    name: z3.string().optional().describe("Optional name for the frame"),
+    parentId: z3.string().optional().describe("Optional parent node ID to append the frame to"),
+    fillColor: z3.object({
+      r: z3.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z3.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z3.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z3.number().min(0).max(1).optional().describe("Alpha component (0-1)")
     }).optional().describe("Fill color in RGBA format"),
-    strokeColor: z.object({
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    strokeColor: z3.object({
+      r: z3.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z3.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z3.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z3.number().min(0).max(1).optional().describe("Alpha component (0-1)")
     }).optional().describe("Stroke color in RGBA format"),
-    strokeWeight: z.number().positive().optional().describe("Stroke weight"),
-    layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().describe("Auto-layout mode for the frame"),
-    layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children"),
-    paddingTop: z.number().optional().describe("Top padding for auto-layout frame"),
-    paddingRight: z.number().optional().describe("Right padding for auto-layout frame"),
-    paddingBottom: z.number().optional().describe("Bottom padding for auto-layout frame"),
-    paddingLeft: z.number().optional().describe("Left padding for auto-layout frame"),
-    primaryAxisAlignItems: z.enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"]).optional().describe("Primary axis alignment for auto-layout frame. Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
-    counterAxisAlignItems: z.enum(["MIN", "MAX", "CENTER", "BASELINE"]).optional().describe("Counter axis alignment for auto-layout frame"),
-    layoutSizingHorizontal: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Horizontal sizing mode for auto-layout frame"),
-    layoutSizingVertical: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Vertical sizing mode for auto-layout frame"),
-    itemSpacing: z.number().optional().describe("Distance between children in auto-layout frame. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN.")
+    strokeWeight: z3.number().positive().optional().describe("Stroke weight"),
+    layoutMode: z3.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().describe("Auto-layout mode for the frame"),
+    layoutWrap: z3.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children"),
+    paddingTop: z3.number().optional().describe("Top padding for auto-layout frame"),
+    paddingRight: z3.number().optional().describe("Right padding for auto-layout frame"),
+    paddingBottom: z3.number().optional().describe("Bottom padding for auto-layout frame"),
+    paddingLeft: z3.number().optional().describe("Left padding for auto-layout frame"),
+    primaryAxisAlignItems: z3.enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"]).optional().describe("Primary axis alignment for auto-layout frame. Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
+    counterAxisAlignItems: z3.enum(["MIN", "MAX", "CENTER", "BASELINE"]).optional().describe("Counter axis alignment for auto-layout frame"),
+    layoutSizingHorizontal: z3.enum(["FIXED", "HUG", "FILL"]).optional().describe("Horizontal sizing mode for auto-layout frame"),
+    layoutSizingVertical: z3.enum(["FIXED", "HUG", "FILL"]).optional().describe("Vertical sizing mode for auto-layout frame"),
+    itemSpacing: z3.number().optional().describe("Distance between children in auto-layout frame. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN.")
   },
   async ({
     x,
@@ -394,19 +953,19 @@ server.tool(
   "create_text",
   "Create a new text element in Figma",
   {
-    x: z.number().describe("X position"),
-    y: z.number().describe("Y position"),
-    text: z.string().describe("Text content"),
-    fontSize: z.number().optional().describe("Font size (default: 14)"),
-    fontWeight: z.number().optional().describe("Font weight (e.g., 400 for Regular, 700 for Bold)"),
-    fontColor: z.object({
-      r: z.number().min(0).max(1).describe("Red component (0-1)"),
-      g: z.number().min(0).max(1).describe("Green component (0-1)"),
-      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    x: z3.number().describe("X position"),
+    y: z3.number().describe("Y position"),
+    text: z3.string().describe("Text content"),
+    fontSize: z3.number().optional().describe("Font size (default: 14)"),
+    fontWeight: z3.number().optional().describe("Font weight (e.g., 400 for Regular, 700 for Bold)"),
+    fontColor: z3.object({
+      r: z3.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z3.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z3.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z3.number().min(0).max(1).optional().describe("Alpha component (0-1)")
     }).optional().describe("Font color in RGBA format"),
-    name: z.string().optional().describe("Semantic layer name for the text node"),
-    parentId: z.string().optional().describe("Optional parent node ID to append the text to")
+    name: z3.string().optional().describe("Semantic layer name for the text node"),
+    parentId: z3.string().optional().describe("Optional parent node ID to append the text to")
   },
   async ({ x, y, text, fontSize, fontWeight, fontColor, name, parentId }) => {
     try {
@@ -445,11 +1004,11 @@ server.tool(
   "set_fill_color",
   "Set the fill color of a node in Figma can be TextNode or FrameNode",
   {
-    nodeId: z.string().describe("The ID of the node to modify"),
-    r: z.number().min(0).max(1).describe("Red component (0-1)"),
-    g: z.number().min(0).max(1).describe("Green component (0-1)"),
-    b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-    a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    nodeId: z3.string().describe("The ID of the node to modify"),
+    r: z3.number().min(0).max(1).describe("Red component (0-1)"),
+    g: z3.number().min(0).max(1).describe("Green component (0-1)"),
+    b: z3.number().min(0).max(1).describe("Blue component (0-1)"),
+    a: z3.number().min(0).max(1).optional().describe("Alpha component (0-1)")
   },
   async ({ nodeId, r, g, b, a }) => {
     try {
@@ -482,12 +1041,12 @@ server.tool(
   "set_stroke_color",
   "Set the stroke color of a node in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to modify"),
-    r: z.number().min(0).max(1).describe("Red component (0-1)"),
-    g: z.number().min(0).max(1).describe("Green component (0-1)"),
-    b: z.number().min(0).max(1).describe("Blue component (0-1)"),
-    a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
-    weight: z.number().positive().optional().describe("Stroke weight")
+    nodeId: z3.string().describe("The ID of the node to modify"),
+    r: z3.number().min(0).max(1).describe("Red component (0-1)"),
+    g: z3.number().min(0).max(1).describe("Green component (0-1)"),
+    b: z3.number().min(0).max(1).describe("Blue component (0-1)"),
+    a: z3.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
+    weight: z3.number().positive().optional().describe("Stroke weight")
   },
   async ({ nodeId, r, g, b, a, weight }) => {
     try {
@@ -521,9 +1080,9 @@ server.tool(
   "move_node",
   "Move a node to a new position in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to move"),
-    x: z.number().describe("New X position"),
-    y: z.number().describe("New Y position")
+    nodeId: z3.string().describe("The ID of the node to move"),
+    x: z3.number().describe("New X position"),
+    y: z3.number().describe("New Y position")
   },
   async ({ nodeId, x, y }) => {
     try {
@@ -553,9 +1112,9 @@ server.tool(
   "clone_node",
   "Clone an existing node in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to clone"),
-    x: z.number().optional().describe("New X position for the clone"),
-    y: z.number().optional().describe("New Y position for the clone")
+    nodeId: z3.string().describe("The ID of the node to clone"),
+    x: z3.number().optional().describe("New X position for the clone"),
+    y: z3.number().optional().describe("New Y position for the clone")
   },
   async ({ nodeId, x, y }) => {
     try {
@@ -585,9 +1144,9 @@ server.tool(
   "resize_node",
   "Resize a node in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to resize"),
-    width: z.number().positive().describe("New width"),
-    height: z.number().positive().describe("New height")
+    nodeId: z3.string().describe("The ID of the node to resize"),
+    width: z3.number().positive().describe("New width"),
+    height: z3.number().positive().describe("New height")
   },
   async ({ nodeId, width, height }) => {
     try {
@@ -621,7 +1180,7 @@ server.tool(
   "delete_node",
   "Delete a node from Figma",
   {
-    nodeId: z.string().describe("The ID of the node to delete")
+    nodeId: z3.string().describe("The ID of the node to delete")
   },
   async ({ nodeId }) => {
     try {
@@ -650,7 +1209,7 @@ server.tool(
   "delete_multiple_nodes",
   "Delete multiple nodes from Figma at once",
   {
-    nodeIds: z.array(z.string()).describe("Array of node IDs to delete")
+    nodeIds: z3.array(z3.string()).describe("Array of node IDs to delete")
   },
   async ({ nodeIds }) => {
     try {
@@ -677,13 +1236,14 @@ server.tool(
 );
 server.tool(
   "export_node_as_image",
-  "Export a node as an image from Figma",
+  "Export a node as an image from Figma. Optionally save to file.",
   {
-    nodeId: z.string().describe("The ID of the node to export"),
-    format: z.enum(["PNG", "JPG", "SVG", "PDF"]).optional().describe("Export format"),
-    scale: z.number().positive().optional().describe("Export scale")
+    nodeId: z3.string().describe("The ID of the node to export"),
+    format: z3.enum(["PNG", "JPG", "SVG", "PDF"]).optional().describe("Export format"),
+    scale: z3.number().positive().optional().describe("Export scale"),
+    savePath: z3.string().optional().describe("Optional file path to save the image. If provided, saves to disk and returns inline.")
   },
-  async ({ nodeId, format, scale }) => {
+  async ({ nodeId, format, scale, savePath }) => {
     try {
       const result = await sendCommandToFigma("export_node_as_image", {
         nodeId,
@@ -691,15 +1251,38 @@ server.tool(
         scale: scale || 1
       });
       const typedResult = result;
-      return {
-        content: [
-          {
-            type: "image",
-            data: typedResult.imageData,
-            mimeType: typedResult.mimeType || "image/png"
-          }
-        ]
-      };
+      let savedMessage = "";
+      if (savePath) {
+        try {
+          const buffer = Buffer.from(typedResult.imageData, "base64");
+          await mkdir(dirname(savePath), { recursive: true });
+          await writeFile2(savePath, buffer);
+          savedMessage = `Image saved to: ${savePath}`;
+        } catch (saveError) {
+          savedMessage = `Failed to save: ${saveError instanceof Error ? saveError.message : String(saveError)}`;
+        }
+      }
+      const actualFormat = (format || "PNG").toUpperCase();
+      const content = [];
+      if (actualFormat === "SVG") {
+        const svgText = Buffer.from(typedResult.imageData, "base64").toString("utf-8");
+        content.push({ type: "text", text: svgText });
+      } else if (actualFormat === "PDF") {
+        content.push({ type: "text", text: savedMessage || "PDF exported. Use savePath to save to disk." });
+      } else {
+        content.push({
+          type: "image",
+          data: typedResult.imageData,
+          mimeType: typedResult.mimeType || "image/png"
+        });
+      }
+      if (savedMessage && actualFormat !== "PDF") {
+        content.push({
+          type: "text",
+          text: savedMessage
+        });
+      }
+      return { content };
     } catch (error) {
       return {
         content: [
@@ -716,8 +1299,8 @@ server.tool(
   "set_text_content",
   "Set the text content of an existing text node in Figma",
   {
-    nodeId: z.string().describe("The ID of the text node to modify"),
-    text: z.string().describe("New text content")
+    nodeId: z3.string().describe("The ID of the text node to modify"),
+    text: z3.string().describe("New text content")
   },
   async ({ nodeId, text }) => {
     try {
@@ -779,7 +1362,7 @@ server.tool(
   {},
   async () => {
     try {
-      const result = await sendCommandToFigma("get_local_components");
+      const result = await sendCommandToFigma("get_local_components", {}, 12e4);
       return {
         content: [
           {
@@ -804,8 +1387,8 @@ server.tool(
   "get_annotations",
   "Get all annotations in the current document or specific node",
   {
-    nodeId: z.string().describe("node ID to get annotations for specific node"),
-    includeCategories: z.boolean().optional().default(true).describe("Whether to include category information")
+    nodeId: z3.string().describe("node ID to get annotations for specific node"),
+    includeCategories: z3.boolean().optional().default(true).describe("Whether to include category information")
   },
   async ({ nodeId, includeCategories }) => {
     try {
@@ -837,12 +1420,12 @@ server.tool(
   "set_annotation",
   "Create or update an annotation",
   {
-    nodeId: z.string().describe("The ID of the node to annotate"),
-    annotationId: z.string().optional().describe("The ID of the annotation to update (if updating existing annotation)"),
-    labelMarkdown: z.string().describe("The annotation text in markdown format"),
-    categoryId: z.string().optional().describe("The ID of the annotation category"),
-    properties: z.array(z.object({
-      type: z.string()
+    nodeId: z3.string().describe("The ID of the node to annotate"),
+    annotationId: z3.string().optional().describe("The ID of the annotation to update (if updating existing annotation)"),
+    labelMarkdown: z3.string().describe("The annotation text in markdown format"),
+    categoryId: z3.string().optional().describe("The ID of the annotation category"),
+    properties: z3.array(z3.object({
+      type: z3.string()
     })).optional().describe("Additional properties for the annotation")
   },
   async ({ nodeId, annotationId, labelMarkdown, categoryId, properties }) => {
@@ -878,15 +1461,15 @@ server.tool(
   "set_multiple_annotations",
   "Set multiple annotations parallelly in a node",
   {
-    nodeId: z.string().describe("The ID of the node containing the elements to annotate"),
-    annotations: z.array(
-      z.object({
-        nodeId: z.string().describe("The ID of the node to annotate"),
-        labelMarkdown: z.string().describe("The annotation text in markdown format"),
-        categoryId: z.string().optional().describe("The ID of the annotation category"),
-        annotationId: z.string().optional().describe("The ID of the annotation to update (if updating existing annotation)"),
-        properties: z.array(z.object({
-          type: z.string()
+    nodeId: z3.string().describe("The ID of the node containing the elements to annotate"),
+    annotations: z3.array(
+      z3.object({
+        nodeId: z3.string().describe("The ID of the node to annotate"),
+        labelMarkdown: z3.string().describe("The annotation text in markdown format"),
+        categoryId: z3.string().optional().describe("The ID of the annotation category"),
+        annotationId: z3.string().optional().describe("The ID of the annotation to update (if updating existing annotation)"),
+        properties: z3.array(z3.object({
+          type: z3.string()
         })).optional().describe("Additional properties for the annotation")
       })
     ).describe("Array of annotations to apply")
@@ -957,11 +1540,11 @@ server.tool(
   "create_component_instance",
   "Create an instance of a component in Figma. For LOCAL components (from get_local_components), use componentId with the id field. For published LIBRARY components, use componentKey with the publishedKey field.",
   {
-    componentId: z.string().optional().describe("ID of a local component (use the id field from get_local_components result). Use this for unpublished/local components."),
-    componentKey: z.string().optional().describe("Key of a published library component to instantiate (use the publishedKey field from get_local_components result). Only works for published components."),
-    x: z.number().describe("X position"),
-    y: z.number().describe("Y position"),
-    parentId: z.string().optional().describe("Optional parent node ID to place the instance into")
+    componentId: z3.string().optional().describe("ID of a local component (use the id field from get_local_components result). Use this for unpublished/local components."),
+    componentKey: z3.string().optional().describe("Key of a published library component to instantiate (use the publishedKey field from get_local_components result). Only works for published components."),
+    x: z3.number().describe("X position"),
+    y: z3.number().describe("Y position"),
+    parentId: z3.string().optional().describe("Optional parent node ID to place the instance into")
   },
   async ({ componentId, componentKey, x, y, parentId }) => {
     try {
@@ -997,7 +1580,7 @@ server.tool(
   "get_instance_overrides",
   "Get all override properties from a selected component instance. These overrides can be applied to other instances, which will swap them to match the source component.",
   {
-    nodeId: z.string().optional().describe("Optional ID of the component instance to get overrides from. If not provided, currently selected instance will be used.")
+    nodeId: z3.string().optional().describe("Optional ID of the component instance to get overrides from. If not provided, currently selected instance will be used.")
   },
   async ({ nodeId }) => {
     try {
@@ -1029,8 +1612,8 @@ server.tool(
   "set_instance_overrides",
   "Apply previously copied overrides to selected component instances. Target instances will be swapped to the source component and all copied override properties will be applied.",
   {
-    sourceInstanceId: z.string().describe("ID of the source component instance"),
-    targetNodeIds: z.array(z.string()).describe("Array of target instance IDs. Currently selected instances will be used.")
+    sourceInstanceId: z3.string().describe("ID of the source component instance"),
+    targetNodeIds: z3.array(z3.string()).describe("Array of target instance IDs. Currently selected instances will be used.")
   },
   async ({ sourceInstanceId, targetNodeIds }) => {
     try {
@@ -1075,9 +1658,9 @@ server.tool(
   "set_corner_radius",
   "Set the corner radius of a node in Figma",
   {
-    nodeId: z.string().describe("The ID of the node to modify"),
-    radius: z.number().min(0).describe("Corner radius value"),
-    corners: z.array(z.boolean()).length(4).optional().describe(
+    nodeId: z3.string().describe("The ID of the node to modify"),
+    radius: z3.number().min(0).describe("Corner radius value"),
+    corners: z3.array(z3.boolean()).length(4).optional().describe(
       "Optional array of 4 booleans to specify which corners to round [topLeft, topRight, bottomRight, bottomLeft]"
     )
   },
@@ -1222,7 +1805,7 @@ server.tool(
   "scan_text_nodes",
   "Scan all text nodes in the selected Figma node",
   {
-    nodeId: z.string().describe("ID of the node to scan")
+    nodeId: z3.string().describe("ID of the node to scan")
   },
   async ({ nodeId }) => {
     try {
@@ -1283,8 +1866,8 @@ server.tool(
   "scan_nodes_by_types",
   "Scan for child nodes with specific types in the selected Figma node",
   {
-    nodeId: z.string().describe("ID of the node to scan"),
-    types: z.array(z.string()).describe("Array of node types to find in the child nodes (e.g. ['COMPONENT', 'FRAME'])")
+    nodeId: z3.string().describe("ID of the node to scan"),
+    types: z3.array(z3.string()).describe("Array of node types to find in the child nodes (e.g. ['COMPONENT', 'FRAME'])")
   },
   async ({ nodeId, types }) => {
     try {
@@ -1470,11 +2053,11 @@ server.tool(
   "set_multiple_text_contents",
   "Set multiple text contents parallelly in a node",
   {
-    nodeId: z.string().describe("The ID of the node containing the text nodes to replace"),
-    text: z.array(
-      z.object({
-        nodeId: z.string().describe("The ID of the text node"),
-        text: z.string().describe("The replacement text")
+    nodeId: z3.string().describe("The ID of the node containing the text nodes to replace"),
+    text: z3.array(
+      z3.object({
+        nodeId: z3.string().describe("The ID of the text node"),
+        text: z3.string().describe("The replacement text")
       })
     ).describe("Array of text node IDs and their replacement texts")
   },
@@ -1753,9 +2336,9 @@ server.tool(
   "set_layout_mode",
   "Set the layout mode and wrap behavior of a frame in Figma",
   {
-    nodeId: z.string().describe("The ID of the frame to modify"),
-    layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).describe("Layout mode for the frame"),
-    layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children")
+    nodeId: z3.string().describe("The ID of the frame to modify"),
+    layoutMode: z3.enum(["NONE", "HORIZONTAL", "VERTICAL"]).describe("Layout mode for the frame"),
+    layoutWrap: z3.enum(["NO_WRAP", "WRAP"]).optional().describe("Whether the auto-layout frame wraps its children")
   },
   async ({ nodeId, layoutMode, layoutWrap }) => {
     try {
@@ -1789,11 +2372,11 @@ server.tool(
   "set_padding",
   "Set padding values for an auto-layout frame in Figma",
   {
-    nodeId: z.string().describe("The ID of the frame to modify"),
-    paddingTop: z.number().optional().describe("Top padding value"),
-    paddingRight: z.number().optional().describe("Right padding value"),
-    paddingBottom: z.number().optional().describe("Bottom padding value"),
-    paddingLeft: z.number().optional().describe("Left padding value")
+    nodeId: z3.string().describe("The ID of the frame to modify"),
+    paddingTop: z3.number().optional().describe("Top padding value"),
+    paddingRight: z3.number().optional().describe("Right padding value"),
+    paddingBottom: z3.number().optional().describe("Bottom padding value"),
+    paddingLeft: z3.number().optional().describe("Left padding value")
   },
   async ({ nodeId, paddingTop, paddingRight, paddingBottom, paddingLeft }) => {
     try {
@@ -1835,9 +2418,9 @@ server.tool(
   "set_axis_align",
   "Set primary and counter axis alignment for an auto-layout frame in Figma",
   {
-    nodeId: z.string().describe("The ID of the frame to modify"),
-    primaryAxisAlignItems: z.enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"]).optional().describe("Primary axis alignment (MIN/MAX = left/right in horizontal, top/bottom in vertical). Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
-    counterAxisAlignItems: z.enum(["MIN", "MAX", "CENTER", "BASELINE"]).optional().describe("Counter axis alignment (MIN/MAX = top/bottom in horizontal, left/right in vertical)")
+    nodeId: z3.string().describe("The ID of the frame to modify"),
+    primaryAxisAlignItems: z3.enum(["MIN", "MAX", "CENTER", "SPACE_BETWEEN"]).optional().describe("Primary axis alignment (MIN/MAX = left/right in horizontal, top/bottom in vertical). Note: When set to SPACE_BETWEEN, itemSpacing will be ignored as children will be evenly spaced."),
+    counterAxisAlignItems: z3.enum(["MIN", "MAX", "CENTER", "BASELINE"]).optional().describe("Counter axis alignment (MIN/MAX = top/bottom in horizontal, left/right in vertical)")
   },
   async ({ nodeId, primaryAxisAlignItems, counterAxisAlignItems }) => {
     try {
@@ -1875,9 +2458,9 @@ server.tool(
   "set_layout_sizing",
   "Set horizontal and vertical sizing modes for an auto-layout frame in Figma",
   {
-    nodeId: z.string().describe("The ID of the frame to modify"),
-    layoutSizingHorizontal: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Horizontal sizing mode (HUG for frames/text only, FILL for auto-layout children only)"),
-    layoutSizingVertical: z.enum(["FIXED", "HUG", "FILL"]).optional().describe("Vertical sizing mode (HUG for frames/text only, FILL for auto-layout children only)")
+    nodeId: z3.string().describe("The ID of the frame to modify"),
+    layoutSizingHorizontal: z3.enum(["FIXED", "HUG", "FILL"]).optional().describe("Horizontal sizing mode (HUG for frames/text only, FILL for auto-layout children only)"),
+    layoutSizingVertical: z3.enum(["FIXED", "HUG", "FILL"]).optional().describe("Vertical sizing mode (HUG for frames/text only, FILL for auto-layout children only)")
   },
   async ({ nodeId, layoutSizingHorizontal, layoutSizingVertical }) => {
     try {
@@ -1915,9 +2498,9 @@ server.tool(
   "set_item_spacing",
   "Set distance between children in an auto-layout frame",
   {
-    nodeId: z.string().describe("The ID of the frame to modify"),
-    itemSpacing: z.number().optional().describe("Distance between children. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN."),
-    counterAxisSpacing: z.number().optional().describe("Distance between wrapped rows/columns. Only works when layoutWrap is set to WRAP.")
+    nodeId: z3.string().describe("The ID of the frame to modify"),
+    itemSpacing: z3.number().optional().describe("Distance between children. Note: This value will be ignored if primaryAxisAlignItems is set to SPACE_BETWEEN."),
+    counterAxisSpacing: z3.number().optional().describe("Distance between wrapped rows/columns. Only works when layoutWrap is set to WRAP.")
   },
   async ({ nodeId, itemSpacing, counterAxisSpacing }) => {
     try {
@@ -1953,7 +2536,7 @@ server.tool(
   "get_reactions",
   "Get Figma Prototyping Reactions from multiple nodes. CRITICAL: The output MUST be processed using the 'reaction_to_connector_strategy' prompt IMMEDIATELY to generate parameters for connector lines via the 'create_connections' tool.",
   {
-    nodeIds: z.array(z.string()).describe("Array of node IDs to get reactions from")
+    nodeIds: z3.array(z3.string()).describe("Array of node IDs to get reactions from")
   },
   async ({ nodeIds }) => {
     try {
@@ -1990,7 +2573,7 @@ server.tool(
   "set_default_connector",
   "Set a copied connector node as the default connector",
   {
-    connectorId: z.string().optional().describe("The ID of the connector node to set as default")
+    connectorId: z3.string().optional().describe("The ID of the connector node to set as default")
   },
   async ({ connectorId }) => {
     try {
@@ -2021,10 +2604,10 @@ server.tool(
   "create_connections",
   "Create connections between nodes using the default connector style",
   {
-    connections: z.array(z.object({
-      startNodeId: z.string().describe("ID of the starting node"),
-      endNodeId: z.string().describe("ID of the ending node"),
-      text: z.string().optional().describe("Optional text to display on the connector")
+    connections: z3.array(z3.object({
+      startNodeId: z3.string().describe("ID of the starting node"),
+      endNodeId: z3.string().describe("ID of the ending node"),
+      text: z3.string().optional().describe("Optional text to display on the connector")
     })).describe("Array of node connections to create")
   },
   async ({ connections }) => {
@@ -2066,7 +2649,7 @@ server.tool(
   "set_focus",
   "Set focus on a specific node in Figma by selecting it and scrolling viewport to it",
   {
-    nodeId: z.string().describe("The ID of the node to focus on")
+    nodeId: z3.string().describe("The ID of the node to focus on")
   },
   async ({ nodeId }) => {
     try {
@@ -2096,7 +2679,7 @@ server.tool(
   "set_selections",
   "Set selection to multiple nodes in Figma and scroll viewport to show them",
   {
-    nodeIds: z.array(z.string()).describe("Array of node IDs to select")
+    nodeIds: z3.array(z3.string()).describe("Array of node IDs to select")
   },
   async ({ nodeIds }) => {
     try {
@@ -2240,6 +2823,16 @@ function connectToFigma(port = 3055) {
         }
         return;
       }
+      if (json.type === "channels_list") {
+        const requestId = json.id;
+        if (requestId && pendingRequests.has(requestId)) {
+          const request = pendingRequests.get(requestId);
+          clearTimeout(request.timeout);
+          request.resolve(json.channels);
+          pendingRequests.delete(requestId);
+        }
+        return;
+      }
       const myResponse = json.message;
       logger.debug(`Received message: ${JSON.stringify(myResponse)}`);
       logger.log("myResponse" + JSON.stringify(myResponse));
@@ -2290,6 +2883,32 @@ async function joinChannel(channelName) {
     throw error;
   }
 }
+async function listChannels() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    throw new Error("Not connected to Figma socket server");
+  }
+  return new Promise((resolve, reject) => {
+    const id = uuidv4();
+    const request = {
+      type: "list_channels",
+      id
+    };
+    const timeout = setTimeout(() => {
+      if (pendingRequests.has(id)) {
+        pendingRequests.delete(id);
+        reject(new Error("Request to list channels timed out"));
+      }
+    }, 1e4);
+    pendingRequests.set(id, {
+      resolve,
+      reject,
+      timeout,
+      lastActivity: Date.now()
+    });
+    logger.info("Requesting channels list");
+    ws.send(JSON.stringify(request));
+  });
+}
 function sendCommandToFigma(command, params = {}, timeoutMs = 3e4) {
   return new Promise((resolve, reject) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -2339,7 +2958,7 @@ server.tool(
   "join_channel",
   "Join a specific channel to communicate with Figma",
   {
-    channel: z.string().describe("The name of the channel to join").default("")
+    channel: z3.string().describe("The name of the channel to join").default("")
   },
   async ({ channel }) => {
     try {
@@ -2372,6 +2991,43 @@ server.tool(
           {
             type: "text",
             text: `Error joining channel: ${error instanceof Error ? error.message : String(error)}`
+          }
+        ]
+      };
+    }
+  }
+);
+server.tool(
+  "list_channels",
+  "Get list of active channels with connected clients count",
+  {},
+  async () => {
+    try {
+      const channels = await listChannels();
+      if (channels.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "No active channels found. Channels are created when Figma plugin connects."
+            }
+          ]
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(channels, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing channels: ${error instanceof Error ? error.message : String(error)}`
           }
         ]
       };

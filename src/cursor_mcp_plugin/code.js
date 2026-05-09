@@ -111,6 +111,11 @@ async function handleCommand(command, params) {
   switch (command) {
     case "get_document_info":
       return await getDocumentInfo();
+    case "set_current_page":
+      if (!params || !params.pageId) {
+        throw new Error("Missing pageId parameter");
+      }
+      return await setCurrentPage(params.pageId);
     case "get_selection":
       return await getSelection();
     case "get_node_info":
@@ -118,6 +123,11 @@ async function handleCommand(command, params) {
         throw new Error("Missing nodeId parameter");
       }
       return await getNodeInfo(params.nodeId);
+    case "get_node_info_raw":
+      if (!params || !params.nodeId) {
+        throw new Error("Missing nodeId parameter");
+      }
+      return await getNodeInfoRaw(params.nodeId);
     case "get_nodes_info":
       if (!params || !params.nodeIds || !Array.isArray(params.nodeIds)) {
         throw new Error("Missing or invalid nodeIds parameter");
@@ -248,7 +258,7 @@ async function getDocumentInfo() {
   await figma.currentPage.loadAsync();
   const page = figma.currentPage;
   return {
-    name: page.name,
+    name: figma.root.name,
     id: page.id,
     type: page.type,
     children: page.children.map((node) => ({
@@ -261,13 +271,26 @@ async function getDocumentInfo() {
       name: page.name,
       childCount: page.children.length,
     },
-    pages: [
-      {
-        id: page.id,
-        name: page.name,
-        childCount: page.children.length,
-      },
-    ],
+    pages: figma.root.children.map((p) => {
+      const info = { id: p.id, name: p.name, isCurrent: p.id === page.id };
+      if (p.id === page.id) {
+        info.childCount = page.children.length;
+      }
+      return info;
+    }),
+  };
+}
+
+async function setCurrentPage(pageId) {
+  const page = figma.root.children.find((p) => p.id === pageId);
+  if (!page) {
+    throw new Error(`Page not found: ${pageId}`);
+  }
+  await figma.setCurrentPageAsync(page);
+  return {
+    id: page.id,
+    name: page.name,
+    childCount: page.children.length,
   };
 }
 
@@ -396,8 +419,81 @@ function filterFigmaNode(node) {
   return filtered;
 }
 
+// === LOCAL CUSTOMIZATIONS ===
+
+async function getNodeInfoRaw(nodeId) {
+  await figma.currentPage.loadAsync();
+  var node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error("Node not found with ID: " + nodeId);
+  }
+  var response = await node.exportAsync({ format: "JSON_REST_V1" });
+  return response.document;
+}
+
+function serializeEffect(effect) {
+  var serialized = {
+    type: effect.type,
+    visible: effect.visible !== undefined ? effect.visible : true,
+  };
+  if (effect.radius !== undefined) serialized.radius = effect.radius;
+  if (effect.color !== undefined) serialized.color = rgbaToHex(effect.color);
+  if (effect.offset !== undefined) serialized.offset = { x: effect.offset.x, y: effect.offset.y };
+  if (effect.spread !== undefined) serialized.spread = effect.spread;
+  if (effect.blendMode !== undefined) serialized.blendMode = effect.blendMode;
+  return serialized;
+}
+
+function supplementNodeProperties(filteredNode, figmaNode) {
+  if (!filteredNode || !figmaNode) return;
+
+  if ('effects' in figmaNode && figmaNode.effects && figmaNode.effects.length > 0) {
+    filteredNode.effects = figmaNode.effects.map(serializeEffect);
+  }
+
+  if (figmaNode.opacity !== undefined) {
+    filteredNode.opacity = figmaNode.opacity;
+  }
+
+  if (figmaNode.blendMode !== undefined) {
+    filteredNode.blendMode = figmaNode.blendMode;
+  }
+
+  if (figmaNode.strokeWeight !== undefined && typeof figmaNode.strokeWeight !== 'symbol') {
+    filteredNode.strokeWeight = figmaNode.strokeWeight;
+  }
+
+  if (figmaNode.strokeAlign !== undefined) {
+    filteredNode.strokeAlign = figmaNode.strokeAlign;
+  }
+
+  var styles = {};
+  if (figmaNode.fillStyleId && typeof figmaNode.fillStyleId !== 'symbol') styles.fill = figmaNode.fillStyleId;
+  if (figmaNode.strokeStyleId && typeof figmaNode.strokeStyleId !== 'symbol') styles.stroke = figmaNode.strokeStyleId;
+  if (figmaNode.effectStyleId && typeof figmaNode.effectStyleId !== 'symbol') {
+    styles.effect = figmaNode.effectStyleId;
+    filteredNode.effectStyleId = figmaNode.effectStyleId;
+  }
+  if (figmaNode.textStyleId && typeof figmaNode.textStyleId !== 'symbol') styles.text = figmaNode.textStyleId;
+  if (Object.keys(styles).length > 0) {
+    filteredNode.styles = styles;
+  }
+
+  if (filteredNode.children && filteredNode.children.length > 0 && 'children' in figmaNode) {
+    var childMap = {};
+    figmaNode.children.forEach(function(child) { childMap[child.id] = child; });
+    for (var i = 0; i < filteredNode.children.length; i++) {
+      var figmaChild = childMap[filteredNode.children[i].id];
+      if (figmaChild) {
+        supplementNodeProperties(filteredNode.children[i], figmaChild);
+      }
+    }
+  }
+}
+
 async function getNodeInfo(nodeId) {
-  const node = await figma.getNodeByIdAsync(nodeId);
+  await figma.currentPage.loadAsync();
+  let node = await figma.getNodeByIdAsync(nodeId);
 
   if (!node) {
     throw new Error(`Node not found with ID: ${nodeId}`);
@@ -407,12 +503,16 @@ async function getNodeInfo(nodeId) {
     format: "JSON_REST_V1",
   });
 
-  return filterFigmaNode(response.document);
+  const result = filterFigmaNode(response.document);
+  if (result) {
+    supplementNodeProperties(result, node);
+  }
+  return result;
 }
 
 async function getNodesInfo(nodeIds) {
   try {
-    // Load all nodes in parallel
+    await figma.currentPage.loadAsync();
     const nodes = await Promise.all(
       nodeIds.map((id) => figma.getNodeByIdAsync(id))
     );
@@ -426,9 +526,13 @@ async function getNodesInfo(nodeIds) {
         const response = await node.exportAsync({
           format: "JSON_REST_V1",
         });
+        const document = filterFigmaNode(response.document);
+        if (document) {
+          supplementNodeProperties(document, node);
+        }
         return {
           nodeId: node.id,
-          document: filterFigmaNode(response.document),
+          document,
         };
       })
     );
@@ -640,9 +744,13 @@ async function readMyDesign() {
         const response = await node.exportAsync({
           format: "JSON_REST_V1",
         });
+        const document = filterFigmaNode(response.document);
+        if (document) {
+          supplementNodeProperties(document, node);
+        }
         return {
           nodeId: node.id,
-          document: filterFigmaNode(response.document),
+          document,
         };
       })
     );
@@ -1270,9 +1378,7 @@ async function createComponentInstance(params) {
 }
 
 async function exportNodeAsImage(params) {
-  const { nodeId, scale = 1 } = params || {};
-
-  const format = "PNG";
+  const { nodeId, format = "PNG", scale = 1 } = params || {};
 
   if (!nodeId) {
     throw new Error("Missing nodeId parameter");
@@ -2043,30 +2149,6 @@ async function processTextNode(node, parentPath, depth) {
       depth: depth,
     };
 
-    // Highlight the node briefly (optional visual feedback)
-    try {
-      const originalFills = JSON.parse(JSON.stringify(node.fills));
-      node.fills = [
-        {
-          type: "SOLID",
-          color: { r: 1, g: 0.5, b: 0 },
-          opacity: 0.3,
-        },
-      ];
-
-      // Brief delay for the highlight to be visible
-      await delay(100);
-
-      try {
-        node.fills = originalFills;
-      } catch (err) {
-        console.error("Error resetting fills:", err);
-      }
-    } catch (highlightErr) {
-      console.error("Error highlighting text node:", highlightErr);
-      // Continue anyway, highlighting is just visual feedback
-    }
-
     return safeTextNode;
   } catch (nodeErr) {
     console.error("Error processing text node:", nodeErr);
@@ -2116,31 +2198,6 @@ async function findTextNodes(node, parentPath = [], depth = 0, textNodes = []) {
         path: nodePath.join(" > "),
         depth: depth,
       };
-
-      // Only highlight the node if it's not being done via API
-      try {
-        // Safe way to create a temporary highlight without causing serialization issues
-        const originalFills = JSON.parse(JSON.stringify(node.fills));
-        node.fills = [
-          {
-            type: "SOLID",
-            color: { r: 1, g: 0.5, b: 0 },
-            opacity: 0.3,
-          },
-        ];
-
-        // Promise-based delay instead of setTimeout
-        await delay(500);
-
-        try {
-          node.fills = originalFills;
-        } catch (err) {
-          console.error("Error resetting fills:", err);
-        }
-      } catch (highlightErr) {
-        console.error("Error highlighting text node:", highlightErr);
-        // Continue anyway, highlighting is just visual feedback
-      }
 
       textNodes.push(safeTextNode);
     } catch (nodeErr) {
@@ -2296,60 +2353,69 @@ async function setMultipleTextContents(params) {
         console.log(`Original text: "${originalText}"`);
         console.log(`Will translate to: "${replacement.text}"`);
 
-        // Highlight the node before changing text
+        // Save original fills for restoration later
         let originalFills;
         try {
-          // Save original fills for restoration later
           originalFills = JSON.parse(JSON.stringify(textNode.fills));
-          // Apply highlight color (orange with 30% opacity)
-          textNode.fills = [
-            {
-              type: "SOLID",
-              color: { r: 1, g: 0.5, b: 0 },
-              opacity: 0.3,
-            },
-          ];
-        } catch (highlightErr) {
-          console.error(
-            `Error highlighting text node: ${highlightErr.message}`
-          );
-          // Continue anyway, highlighting is just visual feedback
+        } catch (e) {
+          // fills might not be readable, continue without highlight
         }
 
-        // Use the existing setTextContent function to handle font loading and text setting
-        await setTextContent({
-          nodeId: replacement.nodeId,
-          text: replacement.text,
-        });
+        try {
+          if (originalFills) {
+            textNode.fills = [
+              {
+                type: "SOLID",
+                color: { r: 1, g: 0.5, b: 0 },
+                opacity: 0.3,
+              },
+            ];
+          }
 
-        // Keep highlight for a moment after text change, then restore original fills
-        if (originalFills) {
-          try {
-            // Use delay function for consistent timing
+          await setTextContent({
+            nodeId: replacement.nodeId,
+            text: replacement.text,
+          });
+
+          if (originalFills) {
             await delay(500);
-            textNode.fills = originalFills;
-          } catch (restoreErr) {
-            console.error(`Error restoring fills: ${restoreErr.message}`);
+          }
+
+          console.log(
+            `Successfully replaced text in node: ${replacement.nodeId}`
+          );
+          return {
+            success: true,
+            nodeId: replacement.nodeId,
+            originalText: originalText,
+            translatedText: replacement.text,
+          };
+        } catch (error) {
+          console.error(
+            `Error replacing text in node ${replacement.nodeId}: ${error.message}`
+          );
+          return {
+            success: false,
+            nodeId: replacement.nodeId,
+            error: `Error applying replacement: ${error.message}`,
+          };
+        } finally {
+          if (originalFills) {
+            try {
+              textNode.fills = originalFills;
+            } catch (e) {
+              console.error(`Error restoring fills: ${e.message}`);
+            }
           }
         }
-
-        console.log(
-          `Successfully replaced text in node: ${replacement.nodeId}`
-        );
-        return {
-          success: true,
-          nodeId: replacement.nodeId,
-          originalText: originalText,
-          translatedText: replacement.text,
-        };
-      } catch (error) {
+      } catch (outerErr) {
         console.error(
-          `Error replacing text in node ${replacement.nodeId}: ${error.message}`
+          `Error processing node ${replacement.nodeId}: ${outerErr.message}`
         );
         return {
           success: false,
           nodeId: replacement.nodeId,
-          error: `Error applying replacement: ${error.message}`,
+          error: `Error processing node: ${outerErr.message}`,
         };
       }
     });
