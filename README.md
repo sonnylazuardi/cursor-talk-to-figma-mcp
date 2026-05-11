@@ -175,6 +175,13 @@ The MCP server provides the following tools for interacting with Figma:
 - `set_stroke_color` - Set the stroke color and weight of a node
 - `set_corner_radius` - Set the corner radius of a node with optional per-corner control
 
+### Variables (Design Tokens)
+
+- `get_local_variable_collections` - List local variable collections with their modes and variable IDs
+- `get_local_variables` - List local variables, optionally filtered by resolved type (`COLOR`, `FLOAT`, `STRING`, `BOOLEAN`) or collection ID
+- `set_fill_variable` - Bind an existing `COLOR` variable to a node's fill (preserves the design-system link instead of baking in a raw color)
+- `set_stroke_variable` - Bind an existing `COLOR` variable to a node's stroke
+
 ### Layout & Organization
 
 - `move_node` - Move a node to a new position

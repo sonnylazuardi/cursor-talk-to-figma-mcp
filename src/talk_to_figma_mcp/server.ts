@@ -679,6 +679,170 @@ server.tool(
   }
 );
 
+// Get Local Variable Collections Tool
+server.tool(
+  "get_local_variable_collections",
+  "List all local variable collections in the current Figma file, with their modes and variable IDs. Useful for discovering design tokens before binding.",
+  {},
+  async () => {
+    try {
+      const result = await sendCommandToFigma("get_local_variable_collections", {});
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting variable collections: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Get Local Variables Tool
+server.tool(
+  "get_local_variables",
+  "List local variables (design tokens) in the current Figma file. Optionally filter by resolved type (COLOR, FLOAT, STRING, BOOLEAN) or collection ID.",
+  {
+    resolvedType: z
+      .enum(["BOOLEAN", "COLOR", "FLOAT", "STRING"])
+      .optional()
+      .describe("Optional filter: only return variables of this resolved type"),
+    collectionId: z
+      .string()
+      .optional()
+      .describe("Optional filter: only variables from this collection ID"),
+  },
+  async ({ resolvedType, collectionId }: any) => {
+    try {
+      const result = await sendCommandToFigma("get_local_variables", {
+        resolvedType,
+        collectionId,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting variables: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Fill Variable Tool
+server.tool(
+  "set_fill_variable",
+  "Bind an existing COLOR variable to a node's fill. Prefer this over set_fill_color when the design uses tokens/variables so the fill stays connected to the design system.",
+  {
+    nodeId: z.string().describe("The ID of the node whose fill should be bound"),
+    variableId: z
+      .string()
+      .describe("The ID of the COLOR variable to bind (from get_local_variables)"),
+    fillIndex: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe("Index of the fill to bind (default 0). Creates a default SOLID fill at index 0 if the node has no fills."),
+  },
+  async ({ nodeId, variableId, fillIndex }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_fill_variable", {
+        nodeId,
+        variableId,
+        fillIndex,
+      });
+      const typedResult = result as { name: string; boundVariable: { name: string } };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Bound variable "${typedResult.boundVariable.name}" to fill${fillIndex ? ` [${fillIndex}]` : ""} of node "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error binding fill variable: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Set Stroke Variable Tool
+server.tool(
+  "set_stroke_variable",
+  "Bind an existing COLOR variable to a node's stroke. Prefer this over set_stroke_color when the design uses tokens/variables.",
+  {
+    nodeId: z.string().describe("The ID of the node whose stroke should be bound"),
+    variableId: z
+      .string()
+      .describe("The ID of the COLOR variable to bind (from get_local_variables)"),
+    strokeIndex: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe("Index of the stroke to bind (default 0)"),
+  },
+  async ({ nodeId, variableId, strokeIndex }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_stroke_variable", {
+        nodeId,
+        variableId,
+        strokeIndex,
+      });
+      const typedResult = result as { name: string; boundVariable: { name: string } };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Bound variable "${typedResult.boundVariable.name}" to stroke${strokeIndex ? ` [${strokeIndex}]` : ""} of node "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error binding stroke variable: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Move Node Tool
 server.tool(
   "move_node",
@@ -2623,6 +2787,10 @@ type FigmaCommand =
   | "create_text"
   | "set_fill_color"
   | "set_stroke_color"
+  | "get_local_variables"
+  | "get_local_variable_collections"
+  | "set_fill_variable"
+  | "set_stroke_variable"
   | "move_node"
   | "resize_node"
   | "delete_node"
@@ -2702,6 +2870,21 @@ type CommandParams = {
     b: number;
     a?: number;
     weight?: number;
+  };
+  get_local_variables: {
+    resolvedType?: "BOOLEAN" | "COLOR" | "FLOAT" | "STRING";
+    collectionId?: string;
+  };
+  get_local_variable_collections: Record<string, never>;
+  set_fill_variable: {
+    nodeId: string;
+    variableId: string;
+    fillIndex?: number;
+  };
+  set_stroke_variable: {
+    nodeId: string;
+    variableId: string;
+    strokeIndex?: number;
   };
   move_node: {
     nodeId: string;

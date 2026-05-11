@@ -152,6 +152,14 @@ async function handleCommand(command, params) {
       return await setFillColor(params);
     case "set_stroke_color":
       return await setStrokeColor(params);
+    case "get_local_variables":
+      return await getLocalVariables(params);
+    case "get_local_variable_collections":
+      return await getLocalVariableCollections();
+    case "set_fill_variable":
+      return await setFillVariable(params);
+    case "set_stroke_variable":
+      return await setStrokeVariable(params);
     case "move_node":
       return await moveNode(params);
     case "resize_node":
@@ -1025,6 +1033,138 @@ async function setStrokeColor(params) {
     name: node.name,
     strokes: node.strokes,
     strokeWeight: "strokeWeight" in node ? node.strokeWeight : undefined,
+  };
+}
+
+async function getLocalVariableCollections() {
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  return collections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    key: c.key,
+    modes: c.modes.map((m) => ({ modeId: m.modeId, name: m.name })),
+    defaultModeId: c.defaultModeId,
+    variableIds: c.variableIds,
+  }));
+}
+
+async function getLocalVariables(params) {
+  const { resolvedType, collectionId } = params || {};
+  let variables = await figma.variables.getLocalVariablesAsync(resolvedType);
+  if (collectionId) {
+    variables = variables.filter((v) => v.variableCollectionId === collectionId);
+  }
+  return variables.map((v) => ({
+    id: v.id,
+    name: v.name,
+    key: v.key,
+    resolvedType: v.resolvedType,
+    variableCollectionId: v.variableCollectionId,
+    valuesByMode: v.valuesByMode,
+    description: v.description,
+    scopes: v.scopes,
+  }));
+}
+
+async function setFillVariable(params) {
+  const { nodeId, variableId, fillIndex = 0 } = params || {};
+
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!variableId) throw new Error("Missing variableId parameter");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (!("fills" in node)) throw new Error(`Node does not support fills: ${nodeId}`);
+
+  const variable = await figma.variables.getVariableByIdAsync(variableId);
+  if (!variable) throw new Error(`Variable not found with ID: ${variableId}`);
+  if (variable.resolvedType !== "COLOR") {
+    throw new Error(
+      `Variable must be of type COLOR to bind to a fill (got ${variable.resolvedType})`
+    );
+  }
+
+  const existing = node.fills;
+  if (existing === figma.mixed) {
+    throw new Error("Node has mixed fills; specify a single fill first");
+  }
+  const fills = Array.isArray(existing) ? existing.slice() : [];
+  if (fills.length === 0) {
+    fills.push({ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 1 });
+  }
+  const target = fills[fillIndex];
+  if (!target) {
+    throw new Error(`No fill at index ${fillIndex} on node ${nodeId}`);
+  }
+  if (target.type !== "SOLID") {
+    throw new Error(
+      `Fill at index ${fillIndex} is ${target.type}; only SOLID fills support color variable binding`
+    );
+  }
+
+  fills[fillIndex] = figma.variables.setBoundVariableForPaint(
+    target,
+    "color",
+    variable
+  );
+  node.fills = fills;
+
+  return {
+    id: node.id,
+    name: node.name,
+    fills: node.fills,
+    boundVariable: { id: variable.id, name: variable.name },
+  };
+}
+
+async function setStrokeVariable(params) {
+  const { nodeId, variableId, strokeIndex = 0 } = params || {};
+
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!variableId) throw new Error("Missing variableId parameter");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (!("strokes" in node)) throw new Error(`Node does not support strokes: ${nodeId}`);
+
+  const variable = await figma.variables.getVariableByIdAsync(variableId);
+  if (!variable) throw new Error(`Variable not found with ID: ${variableId}`);
+  if (variable.resolvedType !== "COLOR") {
+    throw new Error(
+      `Variable must be of type COLOR to bind to a stroke (got ${variable.resolvedType})`
+    );
+  }
+
+  const existing = node.strokes;
+  if (existing === figma.mixed) {
+    throw new Error("Node has mixed strokes; specify a single stroke first");
+  }
+  const strokes = Array.isArray(existing) ? existing.slice() : [];
+  if (strokes.length === 0) {
+    strokes.push({ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 1 });
+  }
+  const target = strokes[strokeIndex];
+  if (!target) {
+    throw new Error(`No stroke at index ${strokeIndex} on node ${nodeId}`);
+  }
+  if (target.type !== "SOLID") {
+    throw new Error(
+      `Stroke at index ${strokeIndex} is ${target.type}; only SOLID strokes support color variable binding`
+    );
+  }
+
+  strokes[strokeIndex] = figma.variables.setBoundVariableForPaint(
+    target,
+    "color",
+    variable
+  );
+  node.strokes = strokes;
+
+  return {
+    id: node.id,
+    name: node.name,
+    strokes: node.strokes,
+    boundVariable: { id: variable.id, name: variable.name },
   };
 }
 
