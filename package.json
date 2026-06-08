@@ -2,6 +2,14 @@
   "name": "cursor-talk-to-figma-mcp",
   "description": "Cursor Talk to Figma MCP",
   "version": "0.3.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grab/cursor-talk-to-figma-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/grab/cursor-talk-to-figma-mcp/issues"
+  },
+  "homepage": "https://github.com/grab/cursor-talk-to-figma-mcp#readme",
   "module": "dist/server.js",
   "main": "dist/server.js",
   "bin": {
