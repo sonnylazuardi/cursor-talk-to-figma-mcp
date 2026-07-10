@@ -63,6 +63,16 @@ Add the server to your Cursor MCP configuration in `~/.cursor/mcp.json`:
 }
 ```
 
+### MCP Server: Integration with Autohand Code
+
+Add the published server from the command line:
+
+```bash
+autohand mcp add TalkToFigma bunx cursor-talk-to-figma-mcp@latest
+```
+
+Add `--scope project` after `add` to keep the server configuration in the current project. See [Autohand Code](https://github.com/autohandai/code-cli/) for current installation and CLI details.
+
 ### WebSocket Server
 
 Start the WebSocket server:
