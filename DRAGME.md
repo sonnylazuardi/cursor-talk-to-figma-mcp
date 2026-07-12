@@ -7,22 +7,22 @@ flowchart TD
     A[Start Setup] --> B{System Check}
     B -->|✅ Pass| C{Admin Access?}
     B -->|❌ Failed| Z[❌ Fix Prerequisites]
-    
+
     C -->|✅ Yes| D[Method A: Full Install<br/>Homebrew + Bun]
     C -->|❌ No| E[Method B: Cursor-Only<br/>No System Changes]
-    
+
     D --> F[Clone in Cursor]
     E --> F
-    
+
     F --> G[Configure MCP]
     G --> H{MCP Connected?}
     H -->|✅ Yes| I[Start WebSocket]
     H -->|❌ No| J[Debug & Retry]
-    
+
     I --> K[Install Figma Plugin]
     K --> L[Test Integration]
     L --> M[✅ Complete]
-    
+
     J --> H
 ```
 
@@ -35,12 +35,12 @@ Install and configure Cursor-Figma MCP integration with **AI-agent-friendly deci
 This guide is **specifically designed for AI agents** to understand, parse, and execute setup instructions autonomously. Each section includes:
 
 - **Clear boolean decision points** for branching logic
-- **Explicit command verification steps** with expected outputs  
+- **Explicit command verification steps** with expected outputs
 - **Fallback strategies** when primary methods fail
 - **Environment-specific instructions** based on system capabilities
 - **Checkpoint validations** before proceeding to next steps
 
-**AI Agent Instructions**: 
+**AI Agent Instructions**:
 1. Execute each command and verify the expected output
 2. Follow the branching logic based on system environment
 3. If any step fails, use the provided fallback methods
@@ -59,7 +59,7 @@ echo "=== SYSTEM ENVIRONMENT DETECTION ==="
 OS_TYPE=$(uname -s)
 echo "OS_TYPE: $OS_TYPE"
 
-# 2. Shell Type Detection  
+# 2. Shell Type Detection
 echo "SHELL_TYPE: $SHELL"
 
 # 3. Homebrew Availability
@@ -106,7 +106,7 @@ echo "=== DETECTION COMPLETE ==="
 
 Use these exact status indicators:
 - ✅ **COMPLETED** - Step finished successfully
-- 🔄 **CURRENT** - Currently executing this step  
+- 🔄 **CURRENT** - Currently executing this step
 - ⏳ **PENDING** - Not started yet
 - ❌ **FAILED** - Step failed, needs attention
 - ⚠️ **WARNING** - Step completed with warnings
@@ -118,13 +118,13 @@ Use these exact status indicators:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -142,17 +142,17 @@ graph TD
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     class A completed
     class B current
     class C,D,E,F,G,H pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -168,7 +168,7 @@ graph TD
 ```mermaid
 graph LR
     A1[🍺 Homebrew Check] --> A2[📦 Install Dependencies]
-    A2 --> A3[⚙️ MCP Setup]  
+    A2 --> A3[⚙️ MCP Setup]
     A3 --> A4[✅ Ready for WebSocket]
 ```
 
@@ -176,7 +176,7 @@ graph LR
 ```mermaid
 graph LR
     B1[🖥️ Project Already Open] --> B2[📖 Setup Dependencies]
-    B2 --> B3[⚙️ MCP Setup] 
+    B2 --> B3[⚙️ MCP Setup]
     B3 --> B4[✅ Ready for WebSocket]
 ```
 
@@ -185,7 +185,7 @@ graph LR
 **AI Agents MUST update progress diagram at these checkpoints:**
 
 1. **After Environment Detection** (Step 1)
-2. **After Method Selection** (Step 2)  
+2. **After Method Selection** (Step 2)
 3. **After Dependency Installation** (Step 3)
 4. **After MCP Setup and Configuration** (Step 4)
 5. **After WebSocket Start** (Step 5)
@@ -201,7 +201,7 @@ graph LR
 CHECKPOINT [STEP_NUMBER]: [STEP_NAME]
 
 Please create/update the progress tracking diagram to show:
-- Current step: [STEP_NAME] 
+- Current step: [STEP_NAME]
 - Status: [✅ COMPLETED / 🔄 CURRENT / ❌ FAILED]
 - Next step: [NEXT_STEP_NAME]
 - Any warnings or issues encountered
@@ -216,7 +216,7 @@ Based on the detection results above, AI agents should follow this decision tree
 ```bash
 # AI Agent Decision Variables (set based on detection above)
 HOMEBREW_AVAILABLE="YES"  # or "NO"
-NODE_AVAILABLE="YES"      # or "NO" 
+NODE_AVAILABLE="YES"      # or "NO"
 BUN_AVAILABLE="YES"       # or "NO"
 CURSOR_AVAILABLE="YES"    # or "NO"
 SUDO_AVAILABLE="YES"      # or "NO"
@@ -224,7 +224,7 @@ SUDO_AVAILABLE="YES"      # or "NO"
 
 **Decision Tree**:
 - IF `HOMEBREW_AVAILABLE="YES"` AND `SUDO_AVAILABLE="YES"` → **Method A1: Homebrew Installation**
-- ELIF `SUDO_AVAILABLE="YES"` AND `HOMEBREW_AVAILABLE="NO"` → **Method A2: Direct Installation**  
+- ELIF `SUDO_AVAILABLE="YES"` AND `HOMEBREW_AVAILABLE="NO"` → **Method A2: Direct Installation**
 - ELIF `CURSOR_AVAILABLE="YES"` AND `SUDO_AVAILABLE="NO"` → **Method B: Cursor-Only Setup**
 - ELSE → **Error: Insufficient System Access**
 
@@ -236,7 +236,7 @@ SUDO_AVAILABLE="YES"      # or "NO"
 - Cleanest dependency management
 - Best for macOS systems with Homebrew
 
-### 🔧 Method A2: Direct Installation  
+### 🔧 Method A2: Direct Installation
 **Conditions**: `SUDO_AVAILABLE="YES"` AND `HOMEBREW_AVAILABLE="NO"`
 - Direct installation without package manager
 - For systems without Homebrew but with admin access
@@ -264,15 +264,15 @@ Please create the Method A1 progress tracking diagram:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A1 Selected]
-    B --> C[🍺 Homebrew Check] 
+    B --> C[🍺 Homebrew Check]
     C --> D[📦 Install Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A completed
     class B current
     class C,D,E,F pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -305,7 +305,7 @@ else
     echo "✅ Node.js already available: $NODE_VERSION"
 fi
 
-# Install Bun if not available  
+# Install Bun if not available
 if [ "$BUN_AVAILABLE" = "NO" ]; then
     echo "Installing Bun via Homebrew..."
     brew install bun
@@ -319,7 +319,7 @@ fi
 # Verify installations
 echo "=== DEPENDENCY VERIFICATION ==="
 node --version && echo "✅ Node.js working"
-bun --version && echo "✅ Bun working"  
+bun --version && echo "✅ Bun working"
 git --version && echo "✅ Git working"
 which cursor && echo "✅ Cursor available" || echo "❌ Install Cursor IDE manually"
 ```
@@ -336,15 +336,15 @@ Update Method A1 progress - mark Homebrew Check and Dependencies as completed:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A1 Selected]
-    B --> C[🍺 Homebrew Check] 
+    B --> C[🍺 Homebrew Check]
     C --> D[📦 Install Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A,B,C,D completed
     class E current
     class F pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -385,13 +385,13 @@ Method A1 fully completed, ready for common steps:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A1 Selected]
-    B --> C[🍺 Homebrew Check] 
+    B --> C[🍺 Homebrew Check]
     C --> D[📦 Install Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A,B,C,D,E,F completed
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
 ```
 
@@ -416,14 +416,14 @@ Please create the Method A2 progress tracking diagram:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A2 Selected]
-    B --> C[⚡ Install Bun Direct] 
+    B --> C[⚡ Install Bun Direct]
     C --> D[⚙️ MCP Setup]
     D --> E[🚀 Ready for WebSocket]
-    
+
     class A completed
     class B current
     class C,D,E pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -443,7 +443,7 @@ graph TD
 # Install Bun directly (requires internet access)
 curl -fsSL https://bun.sh/install | bash
 
-# Reload shell environment 
+# Reload shell environment
 if [[ "$SHELL" == *"zsh"* ]]; then
     source ~/.zshrc 2>/dev/null || echo "⚠️ No .zshrc found"
     echo "🐚 Using Zsh shell"
@@ -468,14 +468,14 @@ Update Method A2 progress - Bun installation completed:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A2 Selected]
-    B --> C[⚡ Install Bun Direct] 
+    B --> C[⚡ Install Bun Direct]
     C --> D[⚙️ MCP Setup]
     D --> E[🚀 Ready for WebSocket]
-    
+
     class A,B,C completed
     class D current
     class E pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -510,12 +510,12 @@ Method A2 fully completed, ready for common steps:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method A2 Selected]
-    B --> C[⚡ Install Bun Direct] 
+    B --> C[⚡ Install Bun Direct]
     C --> D[⚙️ MCP Setup]
     D --> E[🚀 Ready for WebSocket]
-    
+
     class A,B,C,D,E completed
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
 ```
 
@@ -540,15 +540,15 @@ Please create the Method B progress tracking diagram:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method B Selected]
-    B --> C[🖥️ Project Already Open] 
+    B --> C[🖥️ Project Already Open]
     C --> D[📖 Setup Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A completed
     class B current
     class C,D,E,F pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -590,15 +590,15 @@ Update Method B progress - project cloned successfully:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method B Selected]
-    B --> C[🖥️ Project Already Open] 
+    B --> C[🖥️ Project Already Open]
     C --> D[📖 Setup Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A,B,C,D completed
     class E current
     class F pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -614,13 +614,13 @@ Please read the @readme.md file and help me set up this project by following the
 
 IMPORTANT: For each step in the setup process, please:
 1. Create a Mermaid flowchart showing the complete installation process
-2. Highlight which step we're currently on  
+2. Highlight which step we're currently on
 3. Show what steps are completed, current, and upcoming
 4. Include brief descriptions of what each step does
 5. Update the diagram as we progress through each step
 
 Use this Mermaid template structure:
-- Use different colors/styles to show: ✅ Completed, 🔄 Current, ⏳ Upcoming  
+- Use different colors/styles to show: ✅ Completed, 🔄 Current, ⏳ Upcoming
 - Include step numbers and brief descriptions
 - Show the flow from Prerequisites → Installation → Configuration → Testing
 - Make it visually clear where we are in the process
@@ -638,13 +638,13 @@ Method B fully completed, ready for common steps:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method B Selected]
-    B --> C[🖥️ Project Already Open] 
+    B --> C[🖥️ Project Already Open]
     C --> D[📖 Setup Dependencies]
     D --> E[⚙️ MCP Setup]
     E --> F[🚀 Ready for WebSocket]
-    
+
     class A,B,C,D,E,F completed
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
 ```
 
@@ -681,7 +681,7 @@ echo "✅ Project verified - MCP should be configured"
 
 **CHECKPOINT C.1**: Verify in Cursor:
 1. Open Settings (`Cmd+,` on Mac, `Ctrl+,` on Windows/Linux)
-2. Search "MCP"  
+2. Search "MCP"
 3. Confirm "TalkToFigma" shows as "Connected"
 
 **AI AGENTS**: Update overall progress after Cursor launch:
@@ -694,17 +694,17 @@ Update overall progress - MCP setup and configured:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     class A,B,C,D completed
     class E current
     class F,G,H pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -749,7 +749,7 @@ To ensure stability and easy monitoring, we will run the WebSocket server in the
    ```bash
    # In a new terminal (don't close the WebSocket terminal!)
    curl -I http://localhost:3055 2>/dev/null && echo "✅ WebSocket server responding" || echo "❌ Server not responding"
-   
+
    # Check port status
    lsof -i :3055 && echo "✅ Port 3055 in use by WebSocket server" || echo "❌ Port 3055 not in use"
    ```
@@ -771,17 +771,17 @@ Update progress - WebSocket server successfully started:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     class A,B,C,D,E completed
     class F current
     class G,H pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -846,17 +846,17 @@ Update progress - Figma plugin successfully installed:
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     class A,B,C,D,E,F completed
     class G current
     class H pending
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
     classDef current fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef pending fill:#6b7280,stroke:#4b5563,stroke-width:2px,color:#fff
@@ -876,7 +876,7 @@ Progress: 75% Complete - Plugin Installed ✅ - Running Integration Tests
 join_channel
 # Expected: "Successfully joined channel" message
 
-# Test 2: Figma Communication  
+# Test 2: Figma Communication
 get_document_info
 # Expected: JSON data from Figma document
 ```
@@ -920,21 +920,21 @@ CHECKPOINT 6: SETUP COMPLETE - INTEGRATION SUCCESSFUL
 ```mermaid
 graph TD
     A[🔍 Environment Detection] --> B[📦 Method Selection]
-    B --> C[⚡ Dependency Installation] 
+    B --> C[⚡ Dependency Installation]
     C --> D[⚙️ MCP setup and configuration]
     D --> E[🌐 WebSocket Server]
     E --> F[🔌 Figma Plugin]
     F --> G[🧪 Integration Test]
     G --> H[✅ Setup Complete]
-    
+
     class A,B,C,D,E,F,G,H completed
-    
+
     classDef completed fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff
 ```
 
 🎯 **FINAL RESULT**: 100% Complete ✅
 - ✅ Environment Detection Complete
-- ✅ Method Successfully Executed  
+- ✅ Method Successfully Executed
 - ✅ Dependencies Installed
 - ✅ Project Cloned & Configured
 - ✅ MCP Connected
@@ -989,7 +989,7 @@ cursor .
 sleep 5
 ```
 
-### Issue: WebSocket Connection Failed  
+### Issue: WebSocket Connection Failed
 ```bash
 # AI Agent network debugging
 echo "🔍 Debugging WebSocket connection..."
@@ -1023,7 +1023,7 @@ echo "💡 Look for 'WebSocket server running on port 3055' message"
 
 ### Issue: Figma Plugin Not Connecting
 ```bash
-# AI Agent plugin debugging  
+# AI Agent plugin debugging
 echo "🔍 Debugging Figma plugin connection..."
 
 echo "💡 Use '@Terminals' in Cursor to check WebSocket server logs"
@@ -1032,7 +1032,7 @@ echo "💡 You should see connection attempts from Figma plugin"
 # Common plugin connection issues:
 echo "🔧 Plugin Connection Checklist:"
 echo "1. Plugin WebSocket URL set to 'ws://localhost:3055'"
-echo "2. WebSocket server running (check '@Terminals')" 
+echo "2. WebSocket server running (check '@Terminals')"
 echo "3. Figma plugin installed and activated"
 echo "4. No firewall blocking localhost:3055"
 
@@ -1076,14 +1076,14 @@ echo "=== FINAL VERIFICATION MATRIX ==="
 # System Environment
 [ "$OS_TYPE" != "" ] && echo "✅ OS Detection: $OS_TYPE" || echo "❌ OS Detection Failed"
 
-# Required Tools  
+# Required Tools
 [ "$CURSOR_AVAILABLE" = "YES" ] && echo "✅ Cursor IDE Available" || echo "❌ Cursor Missing"
 [ "$GIT_AVAILABLE" = "YES" ] && echo "✅ Git Available" || echo "❌ Git Missing"
 
 # Runtime Environment
 if [ "$BUN_AVAILABLE" = "YES" ]; then
     echo "✅ Bun Runtime: $BUN_VERSION"
-elif [ "$NODE_AVAILABLE" = "YES" ]; then  
+elif [ "$NODE_AVAILABLE" = "YES" ]; then
     echo "✅ Node.js Runtime: $NODE_VERSION"
 else
     echo "❌ No Suitable Runtime Found"
@@ -1111,7 +1111,7 @@ fi
 ### 🎉 Success Criteria
 **ALL of the following must be true:**
 - ✅ Environment detection completed without errors
-- ✅ Appropriate method selected and executed based on system capabilities  
+- ✅ Appropriate method selected and executed based on system capabilities
 - ✅ Project successfully cloned and configured
 - ✅ MCP configuration file present and valid
 - ✅ Cursor IDE launched from project directory
@@ -1156,7 +1156,7 @@ fi
 # Start WebSocket Server (background)
 nohup bun socket > websocket.log 2>&1 & echo $! > websocket.pid
 
-# Stop WebSocket Server  
+# Stop WebSocket Server
 [ -f websocket.pid ] && kill $(cat websocket.pid) && rm websocket.pid
 
 # Check Service Status
@@ -1182,4 +1182,4 @@ ps aux | grep -E "(bun socket|node.*socket)" || echo "WebSocket server not runni
    - Displays connection status and recent activity
    - No need for additional terminal commands
 
-**Remember**: Always keep the WebSocket server running for the Figma plugin to communicate with Cursor! Use `@Terminals` to monitor its health. 
+**Remember**: Always keep the WebSocket server running for the Figma plugin to communicate with Cursor! Use `@Terminals` to monitor its health.
