@@ -182,6 +182,8 @@ async function handleCommand(command, params) {
       return await setMultipleTextContents(params);
     case "get_annotations":
       return await getAnnotations(params);
+    case "set_hyperlink":
+      return await setHyperlink(params);
     case "set_annotation":
       return await setAnnotation(params);
     case "scan_nodes_by_types":
@@ -1482,6 +1484,38 @@ async function setTextContent(params) {
   } catch (error) {
     throw new Error(`Error setting text content: ${error.message}`);
   }
+}
+
+// Set a hyperlink on a range of a text node (whole node by default).
+async function setHyperlink(params) {
+  const { nodeId, url, rangeStart, rangeEnd } = params || {};
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!url) throw new Error("Missing url parameter");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found with ID: ${nodeId}`);
+  if (node.type !== "TEXT") throw new Error(`Node is not a text node: ${nodeId}`);
+
+  // Fonts must be loaded before mutating text ranges (incl. hyperlinks).
+  const fontName = node.fontName;
+  if (fontName === figma.mixed) {
+    const fonts = node.getRangeAllFontNames(0, node.characters.length);
+    for (const f of fonts) await figma.loadFontAsync(f);
+  } else {
+    await figma.loadFontAsync(fontName);
+  }
+
+  const start = typeof rangeStart === "number" ? rangeStart : 0;
+  const end = typeof rangeEnd === "number" ? rangeEnd : node.characters.length;
+
+  if (url === "") {
+    // Empty url clears the hyperlink on the range.
+    node.setRangeHyperlink(start, end, null);
+    return { id: node.id, name: node.name, url: null, start, end };
+  }
+
+  node.setRangeHyperlink(start, end, { type: "URL", value: url });
+  return { id: node.id, name: node.name, url, start, end };
 }
 
 // Initialize settings on load

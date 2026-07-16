@@ -160,6 +160,7 @@ The MCP server provides the following tools for interacting with Figma:
 - `scan_text_nodes` - Scan text nodes with intelligent chunking for large designs
 - `set_text_content` - Set the text content of a single text node
 - `set_multiple_text_contents` - Batch update multiple text nodes efficiently
+- `set_hyperlink` - Set or clear a hyperlink on a range of a text node (whole node by default)
 
 ### Auto Layout & Spacing
 
