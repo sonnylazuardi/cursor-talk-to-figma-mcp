@@ -933,6 +933,57 @@ server.tool(
   }
 );
 
+// Set Hyperlink Tool
+server.tool(
+  "set_hyperlink",
+  "Set (or clear) a hyperlink on a range of a text node. Links the whole text by default; pass rangeStart/rangeEnd for a substring. An empty url clears the hyperlink.",
+  {
+    nodeId: z.string().describe("The ID of the text node to modify"),
+    url: z
+      .string()
+      .describe("The URL to link to. Pass an empty string to clear the hyperlink."),
+    rangeStart: z
+      .number()
+      .optional()
+      .describe("Start character index of the range (default: 0)"),
+    rangeEnd: z
+      .number()
+      .optional()
+      .describe("End character index of the range (default: end of text)"),
+  },
+  async ({ nodeId, url, rangeStart, rangeEnd }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_hyperlink", {
+        nodeId,
+        url,
+        rangeStart,
+        rangeEnd,
+      });
+      const typedResult = result as { name: string; url: string | null };
+      return {
+        content: [
+          {
+            type: "text",
+            text: typedResult.url
+              ? `Set hyperlink on node "${typedResult.name}" to "${typedResult.url}"`
+              : `Cleared hyperlink on node "${typedResult.name}"`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting hyperlink: ${error instanceof Error ? error.message : String(error)
+              }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Get Styles Tool
 server.tool(
   "get_styles",
@@ -2638,6 +2689,7 @@ type FigmaCommand =
   | "set_corner_radius"
   | "clone_node"
   | "set_text_content"
+  | "set_hyperlink"
   | "scan_text_nodes"
   | "set_multiple_text_contents"
   | "get_annotations"
@@ -2763,6 +2815,12 @@ type CommandParams = {
   set_text_content: {
     nodeId: string;
     text: string;
+  };
+  set_hyperlink: {
+    nodeId: string;
+    url: string;
+    rangeStart?: number;
+    rangeEnd?: number;
   };
   scan_text_nodes: {
     nodeId: string;
