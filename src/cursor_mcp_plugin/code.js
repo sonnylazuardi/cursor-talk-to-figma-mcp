@@ -777,11 +777,11 @@ async function createFrame(params) {
     const paintStyle = {
       type: "SOLID",
       color: {
-        r: parseFloat(fillColor.r) || 0,
-        g: parseFloat(fillColor.g) || 0,
-        b: parseFloat(fillColor.b) || 0,
+        r: isNaN(parseFloat(fillColor.r)) ? 0 : parseFloat(fillColor.r),
+        g: isNaN(parseFloat(fillColor.g)) ? 0 : parseFloat(fillColor.g),
+        b: isNaN(parseFloat(fillColor.b)) ? 0 : parseFloat(fillColor.b),
       },
-      opacity: parseFloat(fillColor.a) || 1,
+      opacity: isNaN(parseFloat(fillColor.a)) ? 1 : parseFloat(fillColor.a),
     };
     frame.fills = [paintStyle];
   }
@@ -791,11 +791,11 @@ async function createFrame(params) {
     const strokeStyle = {
       type: "SOLID",
       color: {
-        r: parseFloat(strokeColor.r) || 0,
-        g: parseFloat(strokeColor.g) || 0,
-        b: parseFloat(strokeColor.b) || 0,
+        r: isNaN(parseFloat(strokeColor.r)) ? 0 : parseFloat(strokeColor.r),
+        g: isNaN(parseFloat(strokeColor.g)) ? 0 : parseFloat(strokeColor.g),
+        b: isNaN(parseFloat(strokeColor.b)) ? 0 : parseFloat(strokeColor.b),
       },
-      opacity: parseFloat(strokeColor.a) || 1,
+      opacity: isNaN(parseFloat(strokeColor.a)) ? 1 : parseFloat(strokeColor.a),
     };
     frame.strokes = [strokeStyle];
   }
@@ -893,11 +893,11 @@ async function createText(params) {
   const paintStyle = {
     type: "SOLID",
     color: {
-      r: parseFloat(fontColor.r) || 0,
-      g: parseFloat(fontColor.g) || 0,
-      b: parseFloat(fontColor.b) || 0,
+      r: isNaN(parseFloat(fontColor.r)) ? 0 : parseFloat(fontColor.r),
+      g: isNaN(parseFloat(fontColor.g)) ? 0 : parseFloat(fontColor.g),
+      b: isNaN(parseFloat(fontColor.b)) ? 0 : parseFloat(fontColor.b),
     },
-    opacity: parseFloat(fontColor.a) || 1,
+    opacity: isNaN(parseFloat(fontColor.a)) ? 1 : parseFloat(fontColor.a),
   };
   textNode.fills = [paintStyle];
 
@@ -954,10 +954,10 @@ async function setFillColor(params) {
 
   // Create RGBA color
   const rgbColor = {
-    r: parseFloat(r) || 0,
-    g: parseFloat(g) || 0,
-    b: parseFloat(b) || 0,
-    a: parseFloat(a) || 1,
+    r: isNaN(parseFloat(r)) ? 0 : parseFloat(r),
+    g: isNaN(parseFloat(g)) ? 0 : parseFloat(g),
+    b: isNaN(parseFloat(b)) ? 0 : parseFloat(b),
+    a: isNaN(parseFloat(a)) ? 1 : parseFloat(a),
   };
 
   // Set fill
