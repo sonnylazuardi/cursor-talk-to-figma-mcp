@@ -5,6 +5,20 @@ import { Server, ServerWebSocket } from "bun";
 // Store clients by channel
 const channels = new Map<string, Set<ServerWebSocket<any>>>();
 
+// Summarize a message for logging without dumping large payloads (e.g. base64 imageData)
+function summarizeMessage(data: any, raw: string | Buffer): string {
+  const size = typeof raw === "string" ? Buffer.byteLength(raw) : raw.byteLength;
+  const parts = [`type=${data.type}`, `channel=${data.channel ?? "-"}`, `size=${size}B`];
+  if (data.message?.command) {
+    parts.push(`command=${data.message.command}`, `id=${data.id}`);
+  } else if (data.message?.result !== undefined) {
+    parts.push(`response id=${data.id}`);
+  } else if (data.message && typeof data.message === "object") {
+    parts.push(`keys=${Object.keys(data.message).join(",")}`);
+  }
+  return parts.join(" ");
+}
+
 function handleConnection(ws: ServerWebSocket<any>) {
   // Don't add to clients immediately - wait for channel join
   console.log("New client connected");
@@ -77,14 +91,8 @@ const server = Bun.serve({
     message(ws: ServerWebSocket<any>, message: string | Buffer) {
       try {
         const data = JSON.parse(message as string);
-        console.log(`\n=== Received message from client ===`);
-        console.log(`Type: ${data.type}, Channel: ${data.channel || 'N/A'}`);
-        if (data.message?.command) {
-          console.log(`Command: ${data.message.command}, ID: ${data.id}`);
-        } else if (data.message?.result) {
-          console.log(`Response: ID: ${data.id}, Has Result: ${!!data.message.result}`);
-        }
-        console.log(`Full message:`, JSON.stringify(data, null, 2));
+        const isHeartbeat = data.message?.heartbeat !== undefined;
+        if (!isHeartbeat) console.log(`recv ${summarizeMessage(data, message)}`);
 
         if (data.type === "join") {
           const channelName = data.channel;
@@ -168,16 +176,16 @@ const server = Bun.serve({
                 sender: "peer",
                 channel: channelName
               };
-              console.log(`\n=== Broadcasting to peer #${broadcastCount} ===`);
-              console.log(JSON.stringify(broadcastMessage, null, 2));
               client.send(JSON.stringify(broadcastMessage));
             }
           });
           
-          if (broadcastCount === 0) {
-            console.log(`⚠️  No other clients in channel "${channelName}" to receive message!`);
-          } else {
-            console.log(`✓ Broadcast to ${broadcastCount} peer(s) in channel "${channelName}"`);
+          if (!isHeartbeat) {
+            if (broadcastCount === 0) {
+              console.log(`⚠️  No other clients in channel "${channelName}" to receive message!`);
+            } else {
+              console.log(`✓ Broadcast to ${broadcastCount} peer(s) in channel "${channelName}"`);
+            }
           }
         }
 
